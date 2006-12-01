@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <pwd.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -47,7 +48,21 @@ int parse_cmdline( int argc, char *argv[] )
 	    options.daemon_mode=TRUE;
 	    break;
 	case 'u':
-	    options.uid=atoi(optarg);
+	    {
+		struct passwd *pw=getpwnam(optarg);
+		if( pw!=NULL ) {
+		    options.uid=pw->pw_uid;
+		    if( options.gid==0 ) {
+			options.gid=pw->pw_gid;
+		    }
+		} else {
+		    options.uid=atoi(optarg);
+		    if( options.uid==0 ) {
+			fprintf(stderr, "Username '%s' not found\n", optarg);
+			exit(1);
+		    }
+		}
+	    }
 	    break;
 	case 'g':
 	    options.gid=atoi(optarg);
@@ -75,7 +90,5 @@ int main( int argc, char *argv[] )
 {
     int skipcount=parse_cmdline( argc, argv );
 
-    printf("uid=%d, gid=%d, numbinds=%d, daemon=%s\n", options.uid, options.gid, options.numbinds,
-	options.daemon_mode?"true":"false");
     return 0;
 }
