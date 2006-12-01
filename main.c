@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "config.h"
 
@@ -111,14 +112,53 @@ int main( int argc, char *argv[] )
 	close(sv[1]);
 
 	/* Rename the child socket to the pre-determined fd */
-	dup2(sv[0], COMM_SOCKET);
+	if( dup2(sv[0], COMM_SOCKET)<0 ) {
+	    perror("dup2 failed");
+	    exit(2);
+	}
 	close(sv[0]);
+
+	/* Set the LD_PRELOAD environment variable */
+#define PRELOADLIBNAME "libprivbind.so"
+	char *ldpreload=getenv("LD_PRELOAD");
+	if( ldpreload==NULL ) {
+	    setenv("LD_PRELOAD", PRELOADLIBNAME, FALSE );
+	} else {
+	    char *newpreload=malloc(strlen(ldpreload)+sizeof(PRELOADLIBNAME)+1);
+	    if( newpreload==NULL ) {
+		fprintf(stderr, "Error creating preload environment - not enough memory\n");
+		exit(2);
+	    }
+
+	    sprintf( newpreload, "%s:%s", PRELOADLIBNAME, ldpreload );
+
+	    setenv("LD_PRELOAD", newpreload, TRUE );
+
+	    free(newpreload);
+	}
+
+	/* Set up the variables for exec */
+	char **new_argv=calloc(argc-skipcount+1, sizeof(char*) );
+	if( new_argv==NULL ) {
+	    fprintf(stderr, "Error creating new command line: not enougn memory\n");
+	    exit(2);
+	}
+
+	int i;
+	for( i=0; i<argc-skipcount; ++i ) {
+	    new_argv[i]=argv[i+skipcount];
+	}
+
+	execvp(new_argv[0], new_argv);
 	break;
     default:
 	/* We are the parent */
 
 	/* Close the child socket */
 	close(sv[0]);
+
+	int status;
+	waitpid(child_pid, &status, 0);
 	break;
     }
 
