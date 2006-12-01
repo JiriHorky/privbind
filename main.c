@@ -99,5 +99,28 @@ int main( int argc, char *argv[] )
 	return 2;
     }
 
+    pid_t child_pid=fork();
+    switch(child_pid) {
+    case -1:
+	/* Fork failed */
+	break;
+    case 0:
+	/* We are the child */
+
+	/* Close the parent socket */
+	close(sv[1]);
+
+	/* Rename the child socket to the pre-determined fd */
+	dup2(sv[0], COMM_SOCKET);
+	close(sv[0]);
+	break;
+    default:
+	/* We are the parent */
+
+	/* Close the child socket */
+	close(sv[0]);
+	break;
+    }
+
     return 0;
 }
