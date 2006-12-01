@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <pwd.h>
 
@@ -89,6 +90,14 @@ int parse_cmdline( int argc, char *argv[] )
 int main( int argc, char *argv[] )
 {
     int skipcount=parse_cmdline( argc, argv );
+
+    // Create a couple of sockets for communication with our children
+    int sv[2];
+    if( socketpair(AF_UNIX, SOCK_DGRAM, 0, sv)<0 ) {
+	perror("Error creating communication sockets");
+
+	return 2;
+    }
 
     return 0;
 }
