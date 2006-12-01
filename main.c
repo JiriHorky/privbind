@@ -1,8 +1,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <grp.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -108,6 +110,20 @@ int main( int argc, char *argv[] )
     case 0:
 	/* We are the child */
 
+	/* Drop privileges */
+	if( setgroups(0, NULL )<0 ) {
+	    perror("setgroups failed");
+	    exit(2);
+	}
+	if( setgid(options.gid)<0 ) {
+	    perror("setgid failed");
+	    exit(2);
+	}
+	if( setuid(options.uid)<0 ) {
+	    perror("setuid failed");
+	    exit(2);
+	}
+
 	/* Close the parent socket */
 	close(sv[1]);
 
@@ -119,7 +135,7 @@ int main( int argc, char *argv[] )
 	close(sv[0]);
 
 	/* Set the LD_PRELOAD environment variable */
-#define PRELOADLIBNAME "libprivbind.so"
+#define PRELOADLIBNAME "libprivbind-0.so"
 	char *ldpreload=getenv("LD_PRELOAD");
 	if( ldpreload==NULL ) {
 	    setenv("LD_PRELOAD", PRELOADLIBNAME, FALSE );
@@ -148,7 +164,7 @@ int main( int argc, char *argv[] )
 	for( i=0; i<argc-skipcount; ++i ) {
 	    new_argv[i]=argv[i+skipcount];
 	}
-
+	
 	execvp(new_argv[0], new_argv);
 	break;
     default:
