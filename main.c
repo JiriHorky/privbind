@@ -94,6 +94,11 @@ int main( int argc, char *argv[] )
 {
     int skipcount=parse_cmdline( argc, argv );
 
+    /* Warn if we're run as SUID */
+    if( getuid()!=geteuid() ) {
+	fprintf(stderr, "!!!!Running privbind SUID is a security risk!!!!\n");
+    }
+
     // Create a couple of sockets for communication with our children
     int sv[2];
     if( socketpair(AF_UNIX, SOCK_DGRAM, 0, sv)<0 ) {
@@ -166,6 +171,8 @@ int main( int argc, char *argv[] )
 	}
 	
 	execvp(new_argv[0], new_argv);
+	perror("exec failed");
+	return 2;
 	break;
     default:
 	/* We are the parent */
