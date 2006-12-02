@@ -140,7 +140,6 @@ int main( int argc, char *argv[] )
 	close(sv[0]);
 
 	/* Set the LD_PRELOAD environment variable */
-#define PRELOADLIBNAME "libprivbind-0.so"
 	char *ldpreload=getenv("LD_PRELOAD");
 	if( ldpreload==NULL ) {
 	    setenv("LD_PRELOAD", PRELOADLIBNAME, FALSE );
