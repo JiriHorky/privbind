@@ -6,4 +6,4 @@ lib_LTLIBRARIES = libprivbind.la
 privbind_SOURCES = main.c
 
 libprivbind_la_SOURCES = libprivbind.c
-libprivbind_la_LDFLAGS=-release 0
+libprivbind_la_LDFLAGS=-release 0 -ldl

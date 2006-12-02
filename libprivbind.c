@@ -25,7 +25,9 @@
 
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
 
+#include <stdio.h>
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
+    fprintf(stderr, "Bind called with fd %d\n", sockfd );
     return _bind(sockfd, my_addr, addrlen);
 }
