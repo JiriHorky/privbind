@@ -17,17 +17,96 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include "config.h"
+
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "stub.h"
 
+#include "ipc.h"
+
+static int master_quit=0; /* Whether root process quit - assume false at first */
+
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
 
-#include <stdio.h>
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
-    fprintf(stderr, "Bind called with fd %d\n", sockfd );
-    return _bind(sockfd, my_addr, addrlen);
+    /* Only use this struct after you made sure that it is, indeed, an AF_INET */
+    struct sockaddr_in *in_addr=(struct sockaddr_in *)my_addr;
+
+    /* In most cases, we can let the bind go through as is */
+    if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ||
+	    ntohs(in_addr->sin_port)>=1024 )
+	return _bind(sockfd, my_addr, addrlen);
+
+    /* Prepare the ancillary data for passing the actual FD */
+    struct msghdr msghdr={0};
+    struct cmsghdr *cmsg;
+    char buf[CMSG_SPACE(sizeof(int))];
+    int *fdptr;
+
+    msghdr.msg_control=buf;
+    msghdr.msg_controllen=sizeof(buf);
+
+    cmsg=CMSG_FIRSTHDR(&msghdr);
+    cmsg->cmsg_level=SOL_SOCKET;
+    cmsg->cmsg_type=SCM_RIGHTS;
+    cmsg->cmsg_len=CMSG_LEN(sizeof(int));
+
+    /* Initialize the payload */
+    fdptr=(int *)CMSG_DATA(cmsg);
+    fdptr[0]=sockfd;
+    msghdr.msg_controllen=cmsg->cmsg_len;
+
+    /* Don't forget the data component */
+    struct ipc_msg_req request;
+    struct iovec iov;
+
+    msghdr.msg_iov=&iov;
+    msghdr.msg_iovlen=1;
+
+    iov.iov_base=&request;
+    iov.iov_len=sizeof(request);
+
+    request.type=MSG_REQ_BIND;
+    request.data.bind.addr=*(in_addr);
+
+    int retval=-1;
+
+    if( sendmsg( COMM_SOCKET, &msghdr, MSG_NOSIGNAL )>0 ) {
+	/* Request was sent - wait for reply */
+	struct ipc_msg_reply reply;
+	
+	if( recv( COMM_SOCKET, &reply, sizeof(reply), 0 )>0 ) {
+	    retval=reply.data.stat.retval;
+	    if( retval<0 )
+		errno=reply.data.stat.error;
+	} else {
+	    /* XXX Oops! */
+	}
+    } else {
+	/* An error has occured! */
+	if( errno==EPIPE || errno==ENOTCONN || errno==EBADF ) {
+	    /* The root process has quit */
+	    master_quit=1;
+	    unsetenv("LD_PRELOAD");
+	    close(COMM_SOCKET);
+	} else {
+	    /* XXX - Nothing we do here really makes sense. We'll just print that we have a problem */
+	    perror("privbind communication socket error");
+	}
+
+	/* Do the operation locally, whatever the result */
+	retval=_bind( sockfd, my_addr, addrlen );
+    }
+
+    return retval;
 }
