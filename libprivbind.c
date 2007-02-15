@@ -54,7 +54,6 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
     int *fdptr;
 
     msghdr.msg_control=buf;
-    msghdr.msg_controllen=sizeof(buf);
 
     cmsg=CMSG_FIRSTHDR(&msghdr);
     cmsg->cmsg_level=SOL_SOCKET;
@@ -77,7 +76,7 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
     iov.iov_len=sizeof(request);
 
     request.type=MSG_REQ_BIND;
-    request.data.bind.addr=*(in_addr);
+    request.data.bind.addr=*in_addr;
 
     int retval=-1;
 

@@ -21,6 +21,8 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
@@ -30,6 +32,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "ipc.h"
 
 #define FALSE (0!=0)
 #define TRUE (0==0)
@@ -126,6 +129,7 @@ int main( int argc, char *argv[] )
 	return 2;
     }
 
+    printf("main.c: fork\n");
     pid_t child_pid=fork();
     switch(child_pid) {
     case -1:
@@ -188,6 +192,7 @@ int main( int argc, char *argv[] )
 	    new_argv[i]=argv[i+skipcount];
 	}
 	
+	printf("child: execvp\n");
 	execvp(new_argv[0], new_argv);
 	perror("exec failed");
 	return 2;
@@ -197,6 +202,64 @@ int main( int argc, char *argv[] )
 
 	/* Close the child socket */
 	close(sv[0]);
+
+	/* wait for request from the child */
+	do {
+	  struct msghdr msghdr={0};
+	  struct cmsghdr *cmsg;
+	  char buf[CMSG_SPACE(sizeof(int))];
+	  struct ipc_msg_req request;
+	  struct iovec iov;
+	  int s;
+
+	  msghdr.msg_control=buf;
+	  msghdr.msg_controllen=sizeof(buf);
+
+	  iov.iov_base = &request;
+	  iov.iov_len = sizeof request;
+
+	  msghdr.msg_iov = &iov;
+	  msghdr.msg_iovlen = 1;
+
+	  printf("parent: recvmsg\n");
+	  if ( recvmsg( sv[1], &msghdr, 0) >= 0) {
+	    if ((cmsg = (struct cmsghdr *)CMSG_FIRSTHDR(&msghdr)) != NULL) {
+	      printf("main: request.type: %d\n", request.type);
+	      switch (request.type) {
+	      case MSG_REQ_NONE:
+		printf ("main: request type: NONE\n");
+		break;
+	      case MSG_REQ_BIND:
+		if (cmsg->cmsg_len == CMSG_LEN(sizeof(int))
+		    && cmsg->cmsg_level == SOL_SOCKET
+		    && cmsg->cmsg_type == SCM_RIGHTS)
+		  s = *((int*)CMSG_DATA(cmsg));
+		else {
+		  s = -1;       /* descriptor was not passed */
+		  printf("main: no descriptor passed with bind request\n");
+		}
+		printf("main: request type: BIND; fd: %d port %d addr: %s\n",
+		       s,
+		       ntohs(request.data.bind.addr.sin_port),
+		       inet_ntoa(*(struct in_addr *)
+				 &request.data.bind.addr.sin_addr));
+		if (bind(s, (struct sockadd *)&request.data.bind.addr,
+			 sizeof request.data.bind.addr))
+		  perror("main: bind failed");
+		else
+		  printf("main: bind succeeded\n");
+		break;
+	      default:
+		printf("main: type %d isn't recognized (BIND=%d)!\n", request.type, MSG_REQ_BIND);
+		break;
+	      }
+	    } else {
+	      printf("main: got an empty request\n");
+	    }
+	  } else {
+	    perror("main: recvmsg");
+	  }
+	} while (1);
 
 	int status;
 	waitpid(child_pid, &status, 0);
