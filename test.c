@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
 
     printf("test: bind address: \"%s\"\n", inet_ntoa(addr.sin_addr));
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("bind");
+        perror("test: bind");
         exit(1);
     }
 
-    printf("bind succeeded\n");
+    printf("test: bind succeeded\n");
 
     exit(0);
 }

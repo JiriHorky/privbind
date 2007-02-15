@@ -27,6 +27,7 @@
 #include <pwd.h>
 #include <grp.h>
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -210,6 +211,7 @@ int main( int argc, char *argv[] )
 	  char buf[CMSG_SPACE(sizeof(int))];
 	  struct ipc_msg_req request;
 	  struct iovec iov;
+	  struct ipc_msg_reply reply = {0};
 	  int s;
 
 	  msghdr.msg_control=buf;
@@ -243,11 +245,13 @@ int main( int argc, char *argv[] )
 		       ntohs(request.data.bind.addr.sin_port),
 		       inet_ntoa(*(struct in_addr *)
 				 &request.data.bind.addr.sin_addr));
-		if (bind(s, (struct sockadd *)&request.data.bind.addr,
-			 sizeof request.data.bind.addr))
-		  perror("main: bind failed");
-		else
-		  printf("main: bind succeeded\n");
+		reply.data.stat.retval =
+		  bind(s, (struct sockaddr *)&request.data.bind.addr,
+		       sizeof request.data.bind.addr);
+		if (reply.data.stat.retval < 0)
+		  reply.data.stat.error = errno;
+		if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
+		  perror("main: send");
 		break;
 	      default:
 		printf("main: type %d isn't recognized (BIND=%d)!\n", request.type, MSG_REQ_BIND);
