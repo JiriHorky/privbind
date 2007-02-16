@@ -125,31 +125,32 @@ int main( int argc, char *argv[] )
     // Create a couple of sockets for communication with our children
     int sv[2];
     if( socketpair(AF_UNIX, SOCK_DGRAM, 0, sv)<0 ) {
-	perror("Error creating communication sockets");
-
+	perror("privbind: socketpair");
 	return 2;
     }
 
-    printf("main.c: fork\n");
     pid_t child_pid=fork();
     switch(child_pid) {
     case -1:
-	/* Fork failed */
-	break;
+	perror("privbind: fork");
+	exit(1);
+
     case 0:
 	/* We are the child */
 
 	/* Drop privileges */
 	if( setgroups(0, NULL )<0 ) {
-	    perror("setgroups failed");
+	    perror("privbind: setgroups");
 	    exit(2);
 	}
 	if( setgid(options.gid)<0 ) {
-	    perror("setgid failed");
+	    perror("privbind: setgid");
+	    close(sv[0]);
 	    exit(2);
 	}
 	if( setuid(options.uid)<0 ) {
-	    perror("setuid failed");
+	    perror("privbind: setuid");
+	    close(sv[0]);
 	    exit(2);
 	}
 
@@ -158,7 +159,7 @@ int main( int argc, char *argv[] )
 
 	/* Rename the child socket to the pre-determined fd */
 	if( dup2(sv[0], COMM_SOCKET)<0 ) {
-	    perror("dup2 failed");
+	    perror("privbind: dup2");
 	    exit(2);
 	}
 	close(sv[0]);
@@ -170,7 +171,7 @@ int main( int argc, char *argv[] )
 	} else {
 	    char *newpreload=malloc(strlen(ldpreload)+sizeof(PRELOADLIBNAME)+1);
 	    if( newpreload==NULL ) {
-		fprintf(stderr, "Error creating preload environment - not enough memory\n");
+		fprintf(stderr, "privbind: Error creating preload environment - out of memory\n");
 		exit(2);
 	    }
 
@@ -184,7 +185,7 @@ int main( int argc, char *argv[] )
 	/* Set up the variables for exec */
 	char **new_argv=calloc(argc-skipcount+1, sizeof(char*) );
 	if( new_argv==NULL ) {
-	    fprintf(stderr, "Error creating new command line: not enougn memory\n");
+	    fprintf(stderr, "privbind: Error creating new command line: out of memory\n");
 	    exit(2);
 	}
 
@@ -193,9 +194,8 @@ int main( int argc, char *argv[] )
 	    new_argv[i]=argv[i+skipcount];
 	}
 	
-	printf("child: execvp\n");
 	execvp(new_argv[0], new_argv);
-	perror("exec failed");
+	perror("privbind: exec");
 	return 2;
 	break;
     default:
@@ -212,7 +212,6 @@ int main( int argc, char *argv[] )
 	  struct ipc_msg_req request;
 	  struct iovec iov;
 	  struct ipc_msg_reply reply = {0};
-	  int s;
 
 	  msghdr.msg_control=buf;
 	  msghdr.msg_controllen=sizeof(buf);
@@ -223,51 +222,50 @@ int main( int argc, char *argv[] )
 	  msghdr.msg_iov = &iov;
 	  msghdr.msg_iovlen = 1;
 
-	  printf("parent: recvmsg\n");
 	  if ( recvmsg( sv[1], &msghdr, 0) >= 0) {
 	    if ((cmsg = (struct cmsghdr *)CMSG_FIRSTHDR(&msghdr)) != NULL) {
-	      printf("main: request.type: %d\n", request.type);
 	      switch (request.type) {
 	      case MSG_REQ_NONE:
-		printf ("main: request type: NONE\n");
+	      	reply.type = MSG_REP_NONE;
+		if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
+		  perror("privbind: send");
 		break;
 	      case MSG_REQ_BIND:
+	      	reply.type = MSG_REP_STAT;
+	  	int sock;
 		if (cmsg->cmsg_len == CMSG_LEN(sizeof(int))
 		    && cmsg->cmsg_level == SOL_SOCKET
 		    && cmsg->cmsg_type == SCM_RIGHTS)
-		  s = *((int*)CMSG_DATA(cmsg));
+		  sock = *((int*)CMSG_DATA(cmsg));
 		else {
-		  s = -1;       /* descriptor was not passed */
-		  printf("main: no descriptor passed with bind request\n");
+		  sock = -1;
 		}
-		printf("main: request type: BIND; fd: %d port %d addr: %s\n",
-		       s,
-		       ntohs(request.data.bind.addr.sin_port),
-		       inet_ntoa(*(struct in_addr *)
-				 &request.data.bind.addr.sin_addr));
 		reply.data.stat.retval =
-		  bind(s, (struct sockaddr *)&request.data.bind.addr,
+		  bind(sock, (struct sockaddr *)&request.data.bind.addr,
 		       sizeof request.data.bind.addr);
 		if (reply.data.stat.retval < 0)
 		  reply.data.stat.error = errno;
 		if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
-		  perror("main: send");
+		  perror("privbind: send");
+		if (sock > -1 && close(sock))
+		  perror("privbind: close");
 		break;
 	      default:
-		printf("main: type %d isn't recognized (BIND=%d)!\n", request.type, MSG_REQ_BIND);
+		fprintf(stderr, "privbind: bad request type: %d\n",
+		  request.type);
 		break;
 	      }
 	    } else {
-	      printf("main: got an empty request\n");
+	      fprintf(stderr, "privbind: empty request\n");
 	    }
 	  } else {
-	    perror("main: recvmsg");
+	    perror("privbind: recvmsg");
 	  }
-	} while (1);
+	} while (options.numbinds == 0 || --options.numbinds > 0);
 
 	int status;
 	waitpid(child_pid, &status, 0);
-	break;
+	exit (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
     }
 
     return 0;

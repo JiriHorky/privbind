@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     printf("test started\n");
     fd = socket(PF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
-        perror("socket");
+        perror("test: socket");
         exit(1);
     }
 
@@ -20,15 +20,14 @@ int main(int argc, char *argv[])
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(987);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    printf("test: bind address: \"%s\"\n", inet_ntoa(addr.sin_addr));
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
         perror("test: bind");
         exit(1);
     }
 
-    printf("test: bind succeeded\n");
+    printf("test: OK\n");
 
     exit(0);
 }
