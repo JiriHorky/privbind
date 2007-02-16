@@ -9,7 +9,6 @@ int main(int argc, char *argv[])
     int fd;
     struct sockaddr_in addr;
 
-    printf("test started\n");
     fd = socket(PF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         perror("test: socket");

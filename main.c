@@ -124,7 +124,7 @@ int main( int argc, char *argv[] )
 
     // Create a couple of sockets for communication with our children
     int sv[2];
-    if( socketpair(AF_UNIX, SOCK_DGRAM, 0, sv)<0 ) {
+    if( socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv)<0 ) {
 	perror("privbind: socketpair");
 	return 2;
     }
@@ -212,6 +212,7 @@ int main( int argc, char *argv[] )
 	  struct ipc_msg_req request;
 	  struct iovec iov;
 	  struct ipc_msg_reply reply = {0};
+	  int recvbytes;
 
 	  msghdr.msg_control=buf;
 	  msghdr.msg_controllen=sizeof(buf);
@@ -222,7 +223,7 @@ int main( int argc, char *argv[] )
 	  msghdr.msg_iov = &iov;
 	  msghdr.msg_iovlen = 1;
 
-	  if ( recvmsg( sv[1], &msghdr, 0) >= 0) {
+	  if ( (recvbytes = recvmsg( sv[1], &msghdr, 0)) > 0) {
 	    if ((cmsg = (struct cmsghdr *)CMSG_FIRSTHDR(&msghdr)) != NULL) {
 	      switch (request.type) {
 	      case MSG_REQ_NONE:
@@ -258,6 +259,8 @@ int main( int argc, char *argv[] )
 	    } else {
 	      fprintf(stderr, "privbind: empty request\n");
 	    }
+	  } else if (recvbytes == 0) {
+	    break;
 	  } else {
 	    perror("privbind: recvmsg");
 	  }
