@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([privbind],[0.01])
+AC_INIT([privbind],[0.1])
 AM_INIT_AUTOMAKE
 AC_COPYRIGHT([Copyright (C) 2006 Shachar Shemesh])
 

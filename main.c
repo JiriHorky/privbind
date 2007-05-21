@@ -1,6 +1,6 @@
 /*
  * privbind - allow unpriviledged apps to bind to priviledged ports
- * Copyright (C) 2006 Shachar Shemesh
+ * Copyright (C) 2006-2007 Shachar Shemesh
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -42,17 +42,24 @@ struct cmdoptions {
     uid_t uid; /* UID to turn into */
     gid_t gid; /* GID to turn into */
     int numbinds; /* Number of binds to catch before program can make do on its own */
-    int daemon_mode; /* Assume process is a daemon */
 } options;
 
-void usage()
+void usage(char *progname)
 {
-    printf("%s - allow programs running in unpriviledged mode to bind to low ports\n", PACKAGE_STRING);
-    printf("Usage:\n"
-	"-u - UID to run as (mandatory)\n"
-	"-g - GID to run as (mandatory)\n"
-	"-n - number of binds to catch. After this many binds have happened, all root proccesses exit\n"
-	"-d - Daemon mode - assume that the process being run is a daemon\n"
+    fprintf(stderr, "Usage: %s -u UID -g GID [-n NUM] command line ...\n", progname);
+    fprintf(stderr, "Run '%s -h' for more information.\n", progname);
+}
+void help(progname)
+{
+    printf("%s - run a program as an unpriviledged user, while still being\n",
+	   PACKAGE_STRING);
+    printf("     able to bind to low ports.\n");
+    printf("Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
+    printf("\n"
+	"-u - Name or id of user to run as (mandatory)\n"
+	"-g - Name or id of group to run as (the user's default group is used by default)\n"
+	"-n - number of binds to catch. After this many binds have happened,\n"
+        "     all root proccesses exit.\n"
 	"-h - This help screen\n");
 }
 
@@ -60,7 +67,6 @@ int parse_cmdline( int argc, char *argv[] )
 {
     /* Fill in default values */
     options.numbinds=0;
-    options.daemon_mode=FALSE;
     options.uid=0;
     options.gid=0;
     
@@ -71,14 +77,12 @@ int parse_cmdline( int argc, char *argv[] )
 	case 'n':
 	    options.numbinds=atoi(optarg);
 	    break;
-	case 'd':
-	    options.daemon_mode=TRUE;
-	    break;
 	case 'u':
-	    {
+	     {
 		struct passwd *pw=getpwnam(optarg);
 		if( pw!=NULL ) {
 		    options.uid=pw->pw_uid;
+		    /* set the user's default group */
 		    if( options.gid==0 ) {
 			options.gid=pw->pw_gid;
 		    }
@@ -92,22 +96,42 @@ int parse_cmdline( int argc, char *argv[] )
 	    }
 	    break;
 	case 'g':
-	    options.gid=atoi(optarg);
+            {
+		struct group *gr=getgrnam(optarg);
+		if( gr!=NULL ) {
+		    options.gid=gr->gr_gid;
+		} else {
+		    options.gid=atoi(optarg);
+		    if( options.gid==0 ) {
+			fprintf(stderr, "Group name '%s' not found\n", optarg);
+			exit(1);
+		    }
+		}
+	    }
 	    break;
 	case 'h':
-	    usage();
+	    help(argv[0]);
 	    exit(0);
+	case '?':
+	    usage(argv[0]);
+	    exit(1);
 	}
     }
 
-    if( options.uid==0 || options.gid==0 ) {
-	fprintf(stderr, "Must set both UID and GID for program to run as\n");
-
+    if(options.uid==0){
+	fprintf(stderr, "Missing UID (-u) option.\n");
+	usage(argv[0]);
+	exit(1);
+    }
+    if(options.gid==0){
+	fprintf(stderr, "Missing GID (-g) option.\n");
+	usage(argv[0]);
 	exit(1);
     }
 
     if( (argc-optind)<=0 ) {
-	fprintf(stderr, "Did not supply command name to run\n");
+	fprintf(stderr, "ERROR: missing a command to run.\n");
+	usage(argv[0]);
 	exit(1);
     }
     return optind;
@@ -260,15 +284,22 @@ int main( int argc, char *argv[] )
 	      fprintf(stderr, "privbind: empty request\n");
 	    }
 	  } else if (recvbytes == 0) {
-	    break;
+	    /* If the child closed its end of the socket, it means the
+               child has exited. Let's exit with its exit code. */
+	    int status;
+            waitpid(child_pid, &status, 0);
+	    exit (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+
+	    /*break;*/
 	  } else {
 	    perror("privbind: recvmsg");
 	  }
 	} while (options.numbinds == 0 || --options.numbinds > 0);
 
-	int status;
-	waitpid(child_pid, &status, 0);
-	exit (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+
+	/* If we got here, the child has done the number of binds
+	   specified by the -n option, and we have nothing more to do
+	   and should exit, leaving behind no root process */
     }
 
     return 0;

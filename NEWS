@@ -1,0 +1,16 @@
+New in release 0.1 (May 21, 2007)
+------------------
+
+* The former branch "amos" (by Amos Shapira) is now the main trunk of the
+  project.
+* Cleaned up command line processing and usage messages.
+* Test program test.c now also prints the current user and group (to show that
+  privbind indeed drops privileges correctly).
+* -g option now accept group name, not just group id. Note that if the -g
+  option is missing, the given user's default group is used.
+* If the -n option is given, the root process (the parent) exits after these
+  many binds have been performed (previously it stuck around, contrary to
+  what "privbind -h" said). If the child exits prematurely (without binding
+  this number of times and without leaving its end of the socket to another
+  process), privbind still returns its exit code, which is useful when
+  the program being run fails to run.
