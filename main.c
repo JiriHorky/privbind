@@ -46,7 +46,7 @@ struct cmdoptions {
 
 void usage(char *progname)
 {
-    fprintf(stderr, "Usage: %s -u UID -g GID [-n NUM] command line ...\n", progname);
+    fprintf(stderr, "Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
 void help(progname)
