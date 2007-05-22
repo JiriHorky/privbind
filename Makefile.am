@@ -1,7 +1,7 @@
 bin_PROGRAMS = privbind
 lib_LTLIBRARIES = libprivbind.la
 
-#man1_MANS = privbind.man
+man1_MANS = privbind.1
 
 privbind_SOURCES = main.c
 

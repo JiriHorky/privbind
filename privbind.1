@@ -1,0 +1,160 @@
+.TH privbind 1 "22 May 2007" "Privbind 0.1" ""
+.SH NAME
+privbind \- run a command as an unprivileged user, with additional low
+port binding privileges.
+.SH SYNOPSIS
+.B privbind
+.B \-u
+user
+[
+.B \-g
+group
+]
+[
+.B \-n
+num
+]
+command [ arguments  .\|.\|. ]
+.SH DESCRIPTION
+Normally in Linux, only a superuser process can bind an Internet domain socket
+with a reserved port (port numbers less than 1024). Accordingly,
+server processes are typically run with superuser privileges, which can be
+dropped after binding the reserved port.
+.PP
+.B privbind
+can run a server, right from the start, under an unprivileged non-root
+user with just one extra privilege: the server can bind low ports.
+.PP
+.B privbind
+is useful in several situations. It can be used when the server code cannot
+be trusted enough to start it as root; It can be used when the server is
+written in a language without the setuid(2) feature (e.g., Java); It
+can also be used to run a server written to remain running as root,
+while all the privileges it really needs is the ability to bind low ports.
+.PP
+
+.SH OPTIONS
+.TP
+.B \-u
+The
+.B \-u
+option is mandatory, and specifies under which user to run the given command.
+The user can be specified using either a username, or a numeric user id.
+It should be an unprivileged (non-root) user.
+.TP
+.B \-g
+Specifies the group to switch to when running the given command. If this
+option is missing, then the given user's default group is used.
+.TP
+.BR \-n
+.BR privbind 's
+default behavior is to allow the command being run to do privileged binds
+as many times as it wishes. In order to do that (see "How it works" below),
+the
+.B privbind
+process needs to continue running (as root) as long as the child program
+is running.
+
+The
+.B \-n
+NUM
+option tells
+.B privbind
+that it can assume that only NUM binds need to be given elevated privileges.
+After this number of binds have been done, 
+.BR privbind 's
+root process will exit, leaving behind only the unprivileged user-specified
+program running.
+.TP
+.BR \-h
+Shows a short help screen, and exits.
+.SH "EXIT STATUS"
+When the
+.B \-n
+option is not used,
+.B privbind
+only exits after the command it runs exits, and its exit code is that command's
+exit code.
+
+When the
+.B \-n
+option is used,
+.B privbind
+exits with status 0 after the given number of binds have been performed by
+the command being run. If the command exits prematurely, before the specified
+number of binds, then
+.B privbind
+exits with the command's exit status.
+.SH "HOW IT WORKS"
+Linux's 
+.BR capabilities (7)
+feature and its
+.B CAP_NET_BIND_SERVICE
+capability aimed to do exactly what
+.B privbind
+needs. Unfortunately, though, Linux's capabilities feature is totally
+useless because capability inheritance was never implemented!
+
+Instead,
+.B privbind
+uses the following technique: 
+.B privbind
+runs the given command as a child process, under the given user and
+group. Using LD_PRELOAD (see
+.BR ld.so (8)),
+the
+.BR bind (2)
+function is overridden, so that whenever the child performs a bind,
+it first tries to communicate with the parent (the
+.B privbind
+root process), asking it to do the bind. This communication is done using
+a unix-domain socket (see
+.BR unix (7)),
+which support sending messages, and importantly - file descriptors.
+
+When the
+.B \-n
+option is given, the parent
+.B privbind
+process can exit. When the child's modified bind() tries to use the socket
+it will fail, and will revert to binding on its own (without special
+privileges).
+
+Note that the designation "child" above does not mean that the command
+being run must be a single process, or a direct child of the
+.B privbind
+process. All processes descending from the
+.B privbind
+process will inherit the LD_PRELOAD setting and the communication socket,
+and thus will work as expected.
+
+In the current implementation, a unix-domain socket of type SOCK_SEQPACKET
+is used to communicate between the parent and child. This socket type is,
+unfortunately, a relatively recent addition to Linux. A future release
+may use the standard SOCK_STREAM type, and thus be able to work on much
+older versions of Linux.
+.SH "VERSION"
+The version of
+.B privbind
+described by this manual page is 0.1 (May 22, 2007)
+.SH "COPYRIGHT"
+Copyright (C) 2006-2007, Shachar Shemesh.
+
+.B privbind
+was written by Shachar Shemesh, with contributions from Amos Shapira and
+Nadav Har'El.
+
+.B privbind
+is free software, released under the GNU General Public License (GPL).
+See the COPYING file for more information and the exact license terms.
+
+The latest version of this software can be found in
+
+    http://sourceforge.net/projects/privbind
+.SH "SEE ALSO"
+.BR su (1),
+.BR capabilities (7),
+.BR bind (2),
+.BR setuid (2),
+.BR ld.so (8),
+.BR unix (7)
