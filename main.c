@@ -57,7 +57,7 @@ void help(progname)
     printf("Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
     printf("\n"
 	"-u - Name or id of user to run as (mandatory)\n"
-	"-g - Name or id of group to run as (defaul: the user's default group)\n"
+	"-g - Name or id of group to run as (default: the user's default group)\n"
 	"-n - number of binds to catch. After this many binds have happened,\n"
         "     all root proccesses exit.\n"
 	"-h - This help screen\n");
