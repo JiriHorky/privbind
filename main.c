@@ -44,12 +44,12 @@ struct cmdoptions {
     int numbinds; /* Number of binds to catch before program can make do on its own */
 } options;
 
-void usage(char *progname)
+void usage( const char *progname )
 {
     fprintf(stderr, "Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
-void help(progname)
+void help( const char *progname )
 {
     printf("%s - run a program as an unpriviledged user, while still being\n",
 	   PACKAGE_STRING);
@@ -97,13 +97,22 @@ int parse_cmdline( int argc, char *argv[] )
 	    break;
 	case 'g':
             {
+	        if ( *optarg == '\0' ) {
+		    fprintf(stderr, "Empty group parameters\n");
+		    exit(1);
+		}
 		struct group *gr=getgrnam(optarg);
 		if( gr!=NULL ) {
 		    options.gid=gr->gr_gid;
 		} else {
-		    options.gid=atoi(optarg);
-		    if( options.gid==0 ) {
+		    char *endptr;
+		    options.gid=strtol(optarg, &endptr, 10);
+		    if( *endptr != '\0') {
 			fprintf(stderr, "Group name '%s' not found\n", optarg);
+			exit(1);
+		    }
+		    if( options.gid < 0 ) {
+		        fprintf(stderr, "Illegal group id %d\n", options.gid);
 			exit(1);
 		    }
 		}
