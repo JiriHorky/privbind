@@ -14,3 +14,4 @@ New in release 0.1 (May 21, 2007)
   this number of times and without leaving its end of the socket to another
   process), privbind still returns its exit code, which is useful when
   the program being run fails to run.
+* Added manual page, privbind(1)
