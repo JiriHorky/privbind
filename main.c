@@ -68,7 +68,7 @@ int parse_cmdline( int argc, char *argv[] )
     /* Fill in default values */
     options.numbinds=0;
     options.uid=0;
-    options.gid=0;
+    options.gid=-1;
     
     int opt;
 
@@ -83,7 +83,7 @@ int parse_cmdline( int argc, char *argv[] )
 		if( pw!=NULL ) {
 		    options.uid=pw->pw_uid;
 		    /* set the user's default group */
-		    if( options.gid==0 ) {
+		    if( options.gid==-1 ) {
 			options.gid=pw->pw_gid;
 		    }
 		} else {
@@ -132,7 +132,7 @@ int parse_cmdline( int argc, char *argv[] )
 	usage(argv[0]);
 	exit(1);
     }
-    if(options.gid==0){
+    if(options.gid==-1){
 	fprintf(stderr, "Missing GID (-g) option.\n");
 	usage(argv[0]);
 	exit(1);
