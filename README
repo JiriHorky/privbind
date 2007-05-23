@@ -1,0 +1,55 @@
+This is Privbind 0.1, written by Shachar Shemesh with improvements by Amos
+Shapira and Nadav Har'El.
+Privbind is free software, released under the GNU General Public License
+(see the attached file COPYING for details).
+
+
+What is Privbind
+================
+
+Privbind is a tool for running a command as an unprivileged user, with
+additional low port binding privileges.
+
+Normally in Linux, only a superuser process can bind an Internet domain socket
+with a reserved port (port numbers less than 1024). Accordingly, server
+processes are typically run with superuser privileges, which can be dropped
+after binding the reserved port. Privbind can run a server, right from the
+start, under an unprivileged non-root user with just one extra privilege: the
+server can bind low ports.
+
+Privbind is useful in several situations. It can be used when the server code
+cannot be trusted enough to start it as root; It can be used when the server
+is written in a language without the setuid(2) feature (e.g., Java); It can
+also be used to run a server written to remain running as root, while all the
+privileges it really needs is the ability to bind low ports.
+
+
+System requirements
+===================
+
+The current privbind implementation (see manual page privbind.1 for details)
+was only tested on Linux, using a 2.6 kernel.
+
+Among other things, it assumes the LD_PRELOAD feature, and the SOCK_SEQPACKET
+socket type which is a relatively recent addition to Linux (A future release
+may use the standard SOCK_STREAM type instead).
+
+
+How to compile and install
+==========================
+
+The simplest way to compile and install privbind is to run
+
+	./configure
+	make
+	install
+
+please refer to the file INSTALL for more information.
+
+
+For more information
+====================
+
+Refer to the manual page, privbind(1).
+The latest version of this software can be found in
+	http://sourceforge.net/projects/privbind
