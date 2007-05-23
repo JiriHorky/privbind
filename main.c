@@ -46,7 +46,7 @@ struct cmdoptions {
 
 void usage( const char *progname )
 {
-    fprintf(stderr, "Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
+    fprintf(stderr, "Usage: %s -u UID [-g GID] [-n NUM] command [arguments ...]\n", progname);
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
 void help( const char *progname )
@@ -54,7 +54,7 @@ void help( const char *progname )
     printf("%s - run a program as an unpriviledged user, while still being\n",
 	   PACKAGE_STRING);
     printf("     able to bind to low ports.\n");
-    printf("Usage: %s -u UID [-g GID] [-n NUM] command line ...\n", progname);
+    printf("Usage: %s -u UID [-g GID] [-n NUM] command [arguments ...]\n", progname);
     printf("\n"
 	"-u - Name or id of user to run as (mandatory)\n"
 	"-g - Name or id of group to run as (default: the user's default group)\n"
