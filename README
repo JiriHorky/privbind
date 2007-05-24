@@ -8,20 +8,20 @@ What is Privbind
 ================
 
 Privbind is a tool for running a command as an unprivileged user, with
-additional low port binding privileges.
+additional reserved port binding privileges.
 
 Normally in Linux, only a superuser process can bind an Internet domain socket
 with a reserved port (port numbers less than 1024). Accordingly, server
 processes are typically run with superuser privileges, which can be dropped
 after binding the reserved port. Privbind can run a server, right from the
 start, under an unprivileged non-root user with just one extra privilege: the
-server can bind low ports.
+server can bind to reserved ports.
 
 Privbind is useful in several situations. It can be used when the server code
 cannot be trusted enough to start it as root; It can be used when the server
 is written in a language without the setuid(2) feature (e.g., Java); It can
 also be used to run a server written to remain running as root, while all the
-privileges it really needs is the ability to bind low ports.
+privileges it really needs is the ability to bind reserved ports.
 
 
 System requirements
