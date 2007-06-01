@@ -72,7 +72,7 @@ int parse_cmdline( int argc, char *argv[] )
     
     int opt;
 
-    while( (opt=getopt(argc, argv, "+n:du:g:h" ))!=-1 ) {
+    while( (opt=getopt(argc, argv, "+n:u:g:h" ))!=-1 ) {
 	switch(opt) {
 	case 'n':
 	    options.numbinds=atoi(optarg);
