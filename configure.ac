@@ -8,6 +8,8 @@ AC_COPYRIGHT([Copyright (C) 2006 Shachar Shemesh])
 
 # Checks for programs.
 AC_PROG_CC
+
+AC_DISABLE_STATIC # don't build static libraries by default
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
