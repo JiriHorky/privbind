@@ -33,10 +33,13 @@
 #include <string.h>
 
 #include "config.h"
+#include "paths.h"
 #include "ipc.h"
 
 #define FALSE (0!=0)
 #define TRUE (0==0)
+
+#define PRELOADLIBPATH PKGLIBDIR "/" PRELOADLIBNAME
 
 struct cmdoptions {
     uid_t uid; /* UID to turn into */
@@ -200,15 +203,15 @@ int main( int argc, char *argv[] )
 	/* Set the LD_PRELOAD environment variable */
 	char *ldpreload=getenv("LD_PRELOAD");
 	if( ldpreload==NULL ) {
-	    setenv("LD_PRELOAD", PRELOADLIBNAME, FALSE );
+	    setenv("LD_PRELOAD", PRELOADLIBPATH, FALSE );
 	} else {
-	    char *newpreload=malloc(strlen(ldpreload)+sizeof(PRELOADLIBNAME)+1);
+	    char *newpreload=malloc(strlen(ldpreload)+sizeof(PRELOADLIBPATH)+1);
 	    if( newpreload==NULL ) {
 		fprintf(stderr, "privbind: Error creating preload environment - out of memory\n");
 		exit(2);
 	    }
 
-	    sprintf( newpreload, "%s:%s", PRELOADLIBNAME, ldpreload );
+	    sprintf( newpreload, "%s:%s", PRELOADLIBPATH, ldpreload );
 
 	    setenv("LD_PRELOAD", newpreload, TRUE );
 

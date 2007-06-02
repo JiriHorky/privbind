@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([privbind],[0.1])
+AC_INIT([privbind],[0.2])
 AM_INIT_AUTOMAKE
 AC_COPYRIGHT([Copyright (C) 2006 Shachar Shemesh])
 
@@ -31,7 +31,6 @@ AC_MSG_RESULT($sock_fd_num)
 AC_DEFINE_UNQUOTED(COMM_SOCKET, $sock_fd_num, [Communication socket between parent and child])
 
 AC_DEFINE(PRELOADLIBNAME, "libprivbind-0.so", [Name for the preload library])
-
 
 AC_CONFIG_FILES(Makefile)
 AM_CONFIG_HEADER(config.h)
