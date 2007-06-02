@@ -76,79 +76,82 @@ int parse_cmdline( int argc, char *argv[] )
     int opt;
 
     while( (opt=getopt(argc, argv, "+n:u:g:h" ))!=-1 ) {
-	switch(opt) {
-	case 'n':
-	    options.numbinds=atoi(optarg);
-	    break;
-	case 'u':
-	     {
-		struct passwd *pw=getpwnam(optarg);
-		if( pw!=NULL ) {
-		    options.uid=pw->pw_uid;
-		    /* set the user's default group */
-		    if( options.gid==-1 ) {
-			options.gid=pw->pw_gid;
-		    }
-		} else {
-		    options.uid=atoi(optarg);
-		    if( options.uid==0 ) {
-			fprintf(stderr, "Username '%s' not found\n", optarg);
-			exit(1);
-		    }
-		}
-	    }
-	    break;
-	case 'g':
+        switch(opt) {
+        case 'n':
+            options.numbinds=atoi(optarg);
+            break;
+        case 'u':
             {
-	        if ( *optarg == '\0' ) {
-		    fprintf(stderr, "Empty group parameters\n");
-		    exit(1);
-		}
-		struct group *gr=getgrnam(optarg);
-		if( gr!=NULL ) {
-		    options.gid=gr->gr_gid;
-		} else {
-		    char *endptr;
-		    options.gid=strtol(optarg, &endptr, 10);
-		    if( *endptr != '\0') {
-			fprintf(stderr, "Group name '%s' not found\n", optarg);
-			exit(1);
-		    }
-		    if( options.gid < 0 ) {
-		        fprintf(stderr, "Illegal group id %d\n", options.gid);
-			exit(1);
-		    }
-		}
-	    }
-	    break;
-	case 'h':
-	    help(argv[0]);
-	    exit(0);
-	case '?':
-	    usage(argv[0]);
-	    exit(1);
-	}
+                struct passwd *pw=getpwnam(optarg);
+                if( pw!=NULL ) {
+                    options.uid=pw->pw_uid;
+                    /* set the user's default group */
+                    if( options.gid==-1 ) {
+                        options.gid=pw->pw_gid;
+                    }
+                } else {
+                    options.uid=atoi(optarg);
+                    if( options.uid==0 ) {
+                        fprintf(stderr, "Username '%s' not found\n", optarg);
+                        exit(1);
+                    }
+                }
+            }
+            break;
+        case 'g':
+            {
+                if ( *optarg == '\0' ) {
+                    fprintf(stderr, "Empty group parameters\n");
+                    exit(1);
+                }
+                struct group *gr=getgrnam(optarg);
+                if( gr!=NULL ) {
+                    options.gid=gr->gr_gid;
+                } else {
+                    char *endptr;
+                    options.gid=strtol(optarg, &endptr, 10);
+                    if( *endptr != '\0') {
+                        fprintf(stderr, "Group name '%s' not found\n", optarg);
+                        exit(1);
+                    }
+                    if( options.gid < 0 ) {
+                        fprintf(stderr, "Illegal group id %d\n", options.gid);
+                        exit(1);
+                    }
+                }
+            }
+            break;
+        case 'h':
+            help(argv[0]);
+            exit(0);
+        case '?':
+            usage(argv[0]);
+            exit(1);
+        }
     }
 
     if(options.uid==0){
-	fprintf(stderr, "Missing UID (-u) option.\n");
-	usage(argv[0]);
-	exit(1);
+        fprintf(stderr, "Missing UID (-u) option.\n");
+        usage(argv[0]);
+        exit(1);
     }
     if(options.gid==-1){
-	fprintf(stderr, "Missing GID (-g) option.\n");
-	usage(argv[0]);
-	exit(1);
+        fprintf(stderr, "Missing GID (-g) option.\n");
+        usage(argv[0]);
+        exit(1);
     }
 
     if( (argc-optind)<=0 ) {
-	fprintf(stderr, "ERROR: missing a command to run.\n");
-	usage(argv[0]);
-	exit(1);
+        fprintf(stderr, "ERROR: missing a command to run.\n");
+        usage(argv[0]);
+        exit(1);
     }
     return optind;
 }
 
+/* Technically speaking, the "child" is the parent process. Internally, we call it by its semantics
+ * rather than by its function.
+ */
 int process_child( int sv[2], int argc, char *argv[] )
 {
     /* Drop privileges */
@@ -212,8 +215,27 @@ int process_child( int sv[2], int argc, char *argv[] )
     return 2;
 }
 
-int process_parent( int sv[2], int child_pid )
+/* See comment for "process_child" regarding reverse roles */
+int process_parent( int sv[2] )
 {
+    /* Some of the run options mean that we terminate before our "child". We don't want to confuse
+     * the child with SIGCHLD of which it is not aware.
+     */
+    int grandchild_pid=fork();
+
+    if( grandchild_pid==-1 ) {
+        perror("privbind: Error creating grandchild process");
+
+        return 1;
+    }
+
+    if( grandchild_pid!=0 ) {
+        /* We are the grandchild's parent. Terminate cleanly to indicate to our parent that it's ok
+         * to start the actual program.
+         */
+        return 0;
+    }
+
     /* Close the child socket */
     close(sv[0]);
 
@@ -274,12 +296,9 @@ int process_parent( int sv[2], int child_pid )
             }
         } else if (recvbytes == 0) {
             /* If the child closed its end of the socket, it means the
-               child has exited. Let's exit with its exit code. */
-            int status;
-            waitpid(child_pid, &status, 0);
-            exit (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+               child has exited. We have nothing more to do. */
 
-            /*break;*/
+            return 0;
         } else {
             perror("privbind: recvmsg");
         }
@@ -311,6 +330,11 @@ int main( int argc, char *argv[] )
     }
 
     pid_t child_pid=fork();
+    /* http://sourceforge.net/mailarchive/message.php?msg_name=20070601194744.GA29875%40fermat.math.technion.ac.il
+     * Reverse the usual role of "parent" and "child".
+     * Parent process perform "child" actions - running the command.
+     * Child process is the one that listens on the socket and handles the binds
+     */
     switch(child_pid) {
     case -1:
         perror("privbind: fork");
@@ -318,11 +342,32 @@ int main( int argc, char *argv[] )
 
     case 0:
         /* We are the child */
-        ret=process_child( sv, argc-skipcount, argv+skipcount );
+        ret=process_parent( sv );
         break;
     default:
         /* We are the parent */
-        ret=process_parent( sv, child_pid );
+
+        {
+            /* Wait for the child to exit. */
+            int status=0;
+
+            do {
+                waitpid( child_pid, &status, 0 );
+            } while( !WIFEXITED(status) && !WIFSIGNALED(status) );
+
+            if( WIFEXITED(status) ) {
+                ret=WEXITSTATUS(status);
+
+                if( ret==0 ) {
+                    /* Child has indicated that it is ready */
+                    ret=process_child( sv, argc-skipcount, argv+skipcount );
+                }
+            } else {
+                fprintf(stderr, "privbind: root process terminated with signal %d\n", WTERMSIG(status) );
+                ret=2;
+            }
+        }
+        break;
     }
 
     return ret;
