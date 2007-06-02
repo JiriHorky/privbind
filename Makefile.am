@@ -26,10 +26,13 @@ paths.h: Makefile
 
 test: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
 	if [ -z "$(TESTUSER)" ] ; then echo "Must specify TESTUSER to use in test" ; exit 1 ; fi
-	./privbind -u$(TESTUSER) -l`pwd`/.libs/@PRELOADLIBNAME@ ./testbind
+	./privbind -u$(TESTUSER) -l`pwd`/.libs/@PRELOADLIBNAME@ $(PRIVBIND_PARAMS) \
+	    ./testbind $(TESTBIND_PARAMS)
 
 test-su: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
-	su -c "$(MAKE) test TESTUSER=$(USER)"
+	su -c "$(MAKE) test TESTUSER=$(USER) PRIVBIND_PARAMS='$(PRIVBIND_PARAMS)' \
+	    TESTBIND_PARAMS='$(TESTBIND_PARAMS)'"
 
 test-sudo: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
-	sudo $(MAKE) test TESTUSER=$(USER)
+	sudo $(MAKE) test TESTUSER=$(USER) PRIVBIND_PARAMS='$(PRIVBIND_PARAMS)' \
+	    TESTBIND_PARAMS='$(TESTBIND_PARAMS)'
