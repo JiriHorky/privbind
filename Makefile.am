@@ -20,3 +20,16 @@ CLEANFILES=paths.h
 
 paths.h: Makefile
 	echo "#define PKGLIBDIR \"$(pkglibdir)\"" > $@
+
+# Define the various "make test" targets
+.PHONY: test test-su test-sudo
+
+test: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
+	if [ -z "$(TESTUSER)" ] ; then echo "Must specify TESTUSER to use in test" ; exit 1 ; fi
+	./privbind -u$(TESTUSER) -l`pwd`/.libs/@PRELOADLIBNAME@ ./testbind
+
+test-su: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
+	su -c "$(MAKE) test TESTUSER=$(USER)"
+
+test-sudo: privbind$(EXEEXT) testbind$(EXEEXT) libprivbind.la
+	sudo $(MAKE) test TESTUSER=$(USER)

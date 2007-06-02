@@ -39,12 +39,11 @@
 #define FALSE (0!=0)
 #define TRUE (0==0)
 
-#define PRELOADLIBPATH PKGLIBDIR "/" PRELOADLIBNAME
-
 struct cmdoptions {
     uid_t uid; /* UID to turn into */
     gid_t gid; /* GID to turn into */
     int numbinds; /* Number of binds to catch before program can make do on its own */
+    const char *libname; /* Path to library to use as preload */
 } options;
 
 void usage( const char *progname )
@@ -63,6 +62,8 @@ void help( const char *progname )
 	"-g - Name or id of group to run as (default: the user's default group)\n"
 	"-n - number of binds to catch. After this many binds have happened,\n"
         "     all root proccesses exit.\n"
+        "-l - Explicitly specify the path to the libary to use for preload\n"
+        "     This option is for debug use only.\n"
 	"-h - This help screen\n");
 }
 
@@ -72,10 +73,11 @@ int parse_cmdline( int argc, char *argv[] )
     options.numbinds=0;
     options.uid=0;
     options.gid=-1;
+    options.libname=PKGLIBDIR "/" PRELOADLIBNAME;
     
     int opt;
 
-    while( (opt=getopt(argc, argv, "+n:u:g:h" ))!=-1 ) {
+    while( (opt=getopt(argc, argv, "+n:u:g:l:h" ))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
@@ -120,6 +122,9 @@ int parse_cmdline( int argc, char *argv[] )
                     }
                 }
             }
+            break;
+        case 'l':
+            options.libname=optarg;
             break;
         case 'h':
             help(argv[0]);
@@ -183,15 +188,15 @@ int process_child( int sv[2], int argc, char *argv[] )
     /* Set the LD_PRELOAD environment variable */
     char *ldpreload=getenv("LD_PRELOAD");
     if( ldpreload==NULL ) {
-        setenv("LD_PRELOAD", PRELOADLIBPATH, FALSE );
+        setenv("LD_PRELOAD", options.libname, FALSE );
     } else {
-        char *newpreload=malloc(strlen(ldpreload)+sizeof(PRELOADLIBPATH)+1);
+        char *newpreload=malloc(strlen(ldpreload)+strlen(options.libname)+1);
         if( newpreload==NULL ) {
             fprintf(stderr, "privbind: Error creating preload environment - out of memory\n");
             return 2;
         }
 
-        sprintf( newpreload, "%s:%s", PRELOADLIBPATH, ldpreload );
+        sprintf( newpreload, "%s:%s", options.libname, ldpreload );
 
         setenv("LD_PRELOAD", newpreload, TRUE );
 
