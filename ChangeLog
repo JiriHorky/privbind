@@ -2,6 +2,10 @@ Shachar Shemesh (June 2, 2007)
   * Move the preload library to the PKGLIBDIR.
   * Switch the functions of the fork. Parent is the "child" command, child is
     the root helper.
+  * Change the libprivbind behavior:
+    * Always run the local bind first, in case it works (who knows?)
+    * Make sure to always return the correct errno, even if we failed on
+      another reason.
 
 Release 0.1 (May 21, 2007)
 

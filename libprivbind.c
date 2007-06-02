@@ -37,15 +37,30 @@ static int master_quit=0; /* Whether root process quit - assume false at first *
 
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
 
+static void master_cleanup()
+{
+    /* The root process has quit */
+    master_quit=1;
+    unsetenv("LD_PRELOAD");
+    close(COMM_SOCKET);
+}
+
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
+    /* First of all, attempt the bind. We only need the socket if it fails with access denied */
+
+    int oret=_bind( sockfd, my_addr, addrlen );
+    if( oret==0 || errno!=EACCES )
+        return oret;
+
     /* Only use this struct after you made sure that it is, indeed, an AF_INET */
     struct sockaddr_in *in_addr=(struct sockaddr_in *)my_addr;
 
     /* In most cases, we can let the bind go through as is */
-    if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ||
-	    ntohs(in_addr->sin_port)>=1024 )
-	return _bind(sockfd, my_addr, addrlen);
+    if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ) {
+        errno=EACCES;
+	return oret;
+    }
 
     /* Prepare the ancillary data for passing the actual FD */
     struct msghdr msghdr={0};
@@ -79,7 +94,7 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
     request.type=MSG_REQ_BIND;
     request.data.bind.addr=*in_addr;
 
-    int retval=-1;
+    int retval=oret;
 
     if( sendmsg( COMM_SOCKET, &msghdr, MSG_NOSIGNAL )>0 ) {
 	/* Request was sent - wait for reply */
@@ -90,23 +105,22 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 	    if( retval<0 )
 		errno=reply.data.stat.error;
 	} else {
-	    /* XXX Oops! */
+	    /* It would appear that the other process has closed, just return the original retval */
+            master_cleanup();
 	}
     } else {
 	/* An error has occured! */
 	if( errno==EPIPE || errno==ENOTCONN || errno==EBADF ) {
-	    /* The root process has quit */
-	    master_quit=1;
-	    unsetenv("LD_PRELOAD");
-	    close(COMM_SOCKET);
+            master_cleanup();
 	} else {
-	    /* XXX - Nothing we do here really makes sense. We'll just print that we have a problem */
 	    perror("privbind communication socket error");
+            master_cleanup();
 	}
-
-	/* Do the operation locally, whatever the result */
-	retval=_bind( sockfd, my_addr, addrlen );
     }
+
+    /* Make sure we return the original errno, regardless of what caused us to fail */
+    if( retval!=0 )
+        errno=EACCES;
 
     return retval;
 }
