@@ -6,6 +6,9 @@ Shachar Shemesh (June 2, 2007)
     * Always run the local bind first, in case it works (who knows?)
     * Make sure to always return the correct errno, even if we failed on
       another reason.
+  * Documentation improvements
+    * Moved "How it works" from the man page to the README
+    * Spelling fixes
 
 Release 0.1 (May 21, 2007)
 

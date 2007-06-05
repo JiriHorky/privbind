@@ -4,17 +4,10 @@ privbind \- run a command as an unprivileged user, with additional low
 port binding privileges.
 .SH SYNOPSIS
 .B privbind
-.B \-u
-user
-[
-.B \-g
-group
-]
-[
-.B \-n
-num
-]
-command [ arguments  .\|.\|. ]
+\fB\-u\fR \fIuser\fR
+[ \fB\-g\fR \fIgroup\fR]
+[ \fB\-n\fR \fInum\fR]
+\fIcommand\fR [ \fIarguments\fR .\|.\|. ]
 .SH DESCRIPTION
 Normally in Linux, only a superuser process can bind an Internet domain socket
 with a reserved port (port numbers less than 1024). Accordingly,
@@ -32,7 +25,6 @@ written in a language without the setuid(2) feature (e.g., Java); It
 can also be used to run a server written to remain running as root,
 while all the privileges it really needs is the ability to bind low ports.
 .PP
-
 .SH OPTIONS
 .TP
 .B \-u
@@ -48,19 +40,16 @@ option is missing, then the given user's default group is used.
 .TP
 .BR \-n
 .BR privbind 's
-default behavior is to allow the command being run to do privileged binds
+default behaviour is to allow the command being run to do privileged binds
 as many times as it wishes. In order to do that (see "How it works" below),
 the
 .B privbind
 process needs to continue running (as root) as long as the child program
 is running.
 
-The
-.B \-n
-NUM
-option tells
+The \fB\-n \fInum\fR option tells
 .B privbind
-that it can assume that only NUM binds need to be given elevated privileges.
+that it can assume that only num binds need to be given elevated privileges.
 After this number of binds have been done, 
 .BR privbind 's
 root process will exit, leaving behind only the unprivileged user-specified
@@ -69,74 +58,33 @@ program running.
 .BR \-h
 Shows a short help screen, and exits.
 .SH "EXIT STATUS"
-When the
-.B \-n
-option is not used,
+Using technical jargon,
 .B privbind
-only exits after the command it runs exits, and its exit code is that command's
-exit code.
+execs \fIcommand\fR as its main process, running itself in the background. The
+practical upshot of this, in layman terms, is that the user never gets to see
+\fBprivbind\fR's exist status. When running \fBprivbind\fR, the process will exist
+whenever, and with whatever exist status, \fIcommand\fR does.
 
-When the
-.B \-n
-option is used,
-.B privbind
-exits with status 0 after the given number of binds have been performed by
-the command being run. If the command exits prematurely, before the specified
-number of binds, then
-.B privbind
-exits with the command's exit status.
-.SH "HOW IT WORKS"
-Linux's 
-.BR capabilities (7)
-feature and its
-.B CAP_NET_BIND_SERVICE
-capability aimed to do exactly what
-.B privbind
-needs. Unfortunately, though, Linux's capabilities feature is totally
-useless because capability inheritance was never implemented!
+The above point should be particularly noted when using \fBprivbind\fR to run daemons.
 
-Instead,
-.B privbind
-uses the following technique: 
-.B privbind
-runs the given command as a child process, under the given user and
-group. Using LD_PRELOAD (see
-.BR ld.so (8)),
-the
-.BR bind (2)
-function is overridden, so that whenever the child performs a bind,
-it first tries to communicate with the parent (the
-.B privbind
-root process), asking it to do the bind. This communication is done using
-a unix-domain socket (see
-.BR unix (7)),
-which support sending messages, and importantly - file descriptors.
+.SH "BUGS"
+\fBprivbind\fR currently uses "SOCK_SEQPACKET" for communication between
+privileged and non-privileged processes. This socket type is only, currently,
+implemented on relatively new version of Linux, which makes privbind none
+portable to other platforms.
+.P
+\fBprivbind\fR currently has a race condition if a multi-process \fIcommand\fR
+calls bind to privileged ports from more than one process simultaneously.
+.P
+At the moment, certain conditions may result in \fIcommand\fR receiving
+signals as a result of actions carried out by \fBprivbind\fR. At the moment,
+the only known case is of SIGPIPE when \fBprivbind\fR is run with the \fB-n\fR
+option.
 
-When the
-.B \-n
-option is given, the parent
-.B privbind
-process can exit. When the child's modified bind() tries to use the socket
-it will fail, and will revert to binding on its own (without special
-privileges).
-
-Note that the designation "child" above does not mean that the command
-being run must be a single process, or a direct child of the
-.B privbind
-process. All processes descending from the
-.B privbind
-process will inherit the LD_PRELOAD setting and the communication socket,
-and thus will work as expected.
-
-In the current implementation, a unix-domain socket of type SOCK_SEQPACKET
-is used to communicate between the parent and child. This socket type is,
-unfortunately, a relatively recent addition to Linux. A future release
-may use the standard SOCK_STREAM type, and thus be able to work on much
-older versions of Linux.
 .SH "VERSION"
 The version of
 .B privbind
-described by this manual page is 0.1 (May 22, 2007)
+described by this manual page is 0.2 (June 5, 2007)
 .SH "COPYRIGHT"
 Copyright (C) 2006-2007, Shachar Shemesh.
 

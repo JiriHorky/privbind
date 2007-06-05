@@ -1,4 +1,4 @@
-This is Privbind 0.1, written by Shachar Shemesh with improvements by Amos
+This is privbind 0.2, written by Shachar Shemesh with improvements by Amos
 Shapira and Nadav Har'El.
 Privbind is free software, released under the GNU General Public License
 (see the attached file COPYING for details).
@@ -6,16 +6,17 @@ Privbind is free software, released under the GNU General Public License
 
 What is Privbind
 ================
-
 Privbind is a tool for running a command as an unprivileged user, with
 additional reserved port binding privileges.
 
 Normally in Linux, only a superuser process can bind an Internet domain socket
-with a reserved port (port numbers less than 1024). Accordingly, server
+with a privileged port (port numbers less than 1024). Accordingly, server
 processes are typically run with superuser privileges, which can be dropped
-after binding the reserved port. Privbind can run a server, right from the
-start, under an unprivileged non-root user with just one extra privilege: the
-server can bind to reserved ports.
+after binding the reserved port. The privilege dropping has to be a part of the
+server's code.
+
+Privbind can run a server, right from the start, under an unprivileged non-root
+user with just one extra privilege: the server can bind to reserved ports.
 
 Privbind is useful in several situations. It can be used when the server code
 cannot be trusted enough to start it as root; It can be used when the server
@@ -26,26 +27,59 @@ privileges it really needs is the ability to bind reserved ports.
 
 System requirements
 ===================
-
 The current privbind implementation (see manual page privbind.1 for details)
 was only tested on Linux, using a 2.6 kernel.
 
 Among other things, it assumes the LD_PRELOAD feature, and the SOCK_SEQPACKET
-socket type which is a relatively recent addition to Linux (A future release
-may use the standard SOCK_STREAM type instead).
+socket type which is a relatively recent addition to Linux
 
+How privbind works
+==================
+In theory, all one would need is to make use of Linux's capabilities(7) feature
+and its CAP_NET_BIND_SERVICE. Unfortunately, Linux's capabilities feature is
+totally useless because capability inheritance was never implemented!
 
-How to compile and install
-==========================
+Privbind uses a 100% user space approach for solving this issue. Privbind uses
+the LD_PRELOAD method to override the running command's "bind" function.
+Whenever the command tries to bind a privileged port, privbind intercepts the
+call and forwards it to a process left behind, still running as root. This
+process performs the bind on the command's behalf.
 
-The simplest way to compile and install privbind is to run
+Forwarding of a socket to another process is done via a unix domain socket,
+which supports sending a fd to another process.
 
-	./configure
-	make
-	install
+privbind deviates from the accepted standard of "fork + exec", in that it is
+the parent process, not the child, that does "exec". This is done so that the
+command's return code (as well as actual return) be visible to the user
+running privbind, and not privbind's return code, which is, for all intent and
+purposes, irrelevant.
 
-please refer to the file INSTALL for more information.
+Caveats and corner cases
+========================
+Since privbind changes both the parent-child relationship and the code flow of
+certain system functions, care must be taken to avoid the changes in semantics
+from affecting the program run.
 
+The most notable case for such interaction are signals. Two signals of note
+should be pointed out. One is the case where privbind receives the "-n" option.
+With this option, privbind's privileged process terminates after 'num'
+privileged binds have been performed. This means that the child process
+terminates while the parent is still running, causing the parent to receive a
+SIGCHILD from a child it did not know it had. Privbind solves this problem by
+performing a double-fork, and thus running with no parent.
+
+The second case is when, as before, "-n" caused privbind to terminate prior to
+the actual program terminating. If the program now attempts another bind, it is
+possible that a SIGPIPE will be sent to the process. This signal, again, is one
+not resulting from anything the program did, and may lead to trouble. As of
+version 0.2 of privbind, this problem is not yet handled.
+
+The third case of unintended consequences is when using privbind to run a
+daemon. The standard instructions for writing daemons state that a daemon
+should close, before starting to run, all of its open file descriptors.
+Unfortunately, this also includes the fd used to communicate between privileged
+and unprivileged processes. Privbind solves this problem by also intercepting
+the "close" syscall, and making sure that our own fd is never closed.
 
 For more information
 ====================
