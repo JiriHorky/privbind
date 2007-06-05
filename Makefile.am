@@ -2,8 +2,9 @@ bin_PROGRAMS = privbind
 pkglib_LTLIBRARIES = libprivbind.la
 noinst_PROGRAMS = testbind
 
-man1_MANS = privbind.1
-EXTRA_DIST = $(MANS)
+doc_DATA = README
+man_MANS = privbind.1
+EXTRA_DIST = $(man_MANS)
 
 privbind_SOURCES = main.c
 noinst_HEADERS = ipc.h stub.h
