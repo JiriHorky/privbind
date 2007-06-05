@@ -42,7 +42,7 @@ option is missing, then the given user's default group is used.
 .BR privbind 's
 default behaviour is to allow the application to call bind(2) with
 reserved ports an unlimited number of times. In order to do that
-(see "How it works" below), the
+(see "HOW IT WORKS" below), the
 .B privbind
 helper process needs to wait for the application to exit before it terminates.
 
@@ -74,19 +74,32 @@ that \fBprivbind\fR \fInot\fR be made SUID, as this would allow any user that ca
 run it to run any process as any other (non-root) user. At the moment privbind detects
 such a situation and warns about it, but will continue with the execution.
 
+.SH "HOW IT WORKS"
+In a nutshell, \fBprivbind\fR works by starting two processes. One drops
+privileges and runs (exec(2)) the command, the other remains as root.
+\fBPrivbind\fR makes sure to keep a unix domain socket connecting the two processes.
+
+\fBPrivbind\fR uses LD_PRELOAD to intercept every call to bind(2) made
+by the program. Calls that can be completed non-privileged are done so.
+Calls that require root privileges are forwarded to the root process, that
+carry them out on the program's behalf.
+
+A more detailed explanation is available in the README file.
+
 .SH "BUGS"
 \fBprivbind\fR currently uses "SOCK_SEQPACKET" for communication between
 privileged and non-privileged processes. This socket type is only
 implemented on Linux kernel 2.6.4 and later, which makes privbind none
 portable to older Linux kernels and many other non-Linux platforms.
 .P
-\fBprivbind\fR currently has a race condition if a multi-threaded \fIcommand\fR
+\fBprivbind\fR has a race condition if a multi-threaded \fIcommand\fR
 calls bind to privileged ports from multiple threads simultaneously.
 .P
-At the moment, certain conditions may result in \fIcommand\fR receiving
-signals as a result of actions carried out by \fBprivbind\fR.
-The only known situation is of SIGPIPE when \fBprivbind\fR is run with the
-\fB-n\fR option.
+Certain conditions may result in \fIcommand\fR receiving
+signals as a result of actions carried out by \fBprivbind\fR (i.e.- unexpectedly).
+The only known situation is when \fBprivbind\fR is run with the \fB-n\fR option
+and \fIcommand\fR tries to bind after the root service process has quit. In such
+a case, command may receive an unexpected SIGPIPE.
 
 .SH "VERSION"
 The version of
