@@ -35,6 +35,7 @@
 
 static int master_quit=0; /* Whether root process quit - assume false at first */
 
+FUNCREDIR1( close, int, int );
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
 
 static void master_cleanup()
@@ -123,4 +124,16 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
         errno=EACCES;
 
     return retval;
+}
+
+int close(int fd)
+{
+   /* Is it our fd? */
+   if( fd!=COMM_SOCKET )
+      /* No - pass it on to "close" */
+      return _close(fd);
+
+   /* Yes - override the close and return an error */
+   errno=EBADF;
+   return -1;
 }

@@ -1,4 +1,4 @@
-Shachar Shemesh (June 2, 2007)
+Release 0.2 (June 5, 2007)
   * Move the preload library to the PKGLIBDIR.
   * Switch the functions of the fork. Parent is the "child" command, child is
     the root helper.
@@ -9,6 +9,7 @@ Shachar Shemesh (June 2, 2007)
   * Documentation improvements
     * Moved "How it works" from the man page to the README
     * Spelling fixes
+  * Make sure that the program cannot close our communicatin fd.
 
 Release 0.1 (May 21, 2007)
 

@@ -4,7 +4,7 @@
 AC_PREREQ(2.57)
 AC_INIT([privbind],[0.2])
 AM_INIT_AUTOMAKE
-AC_COPYRIGHT([Copyright (C) 2006 Shachar Shemesh])
+AC_COPYRIGHT([Copyright (C) 2006-2007 Shachar Shemesh])
 
 # Checks for programs.
 AC_PROG_CC
