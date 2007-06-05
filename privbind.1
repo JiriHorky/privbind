@@ -1,7 +1,6 @@
 .TH privbind 1 "22 May 2007" "Privbind 0.1" ""
 .SH NAME
-privbind \- run a command as an unprivileged user, with additional low
-port binding privileges.
+privbind \- allow an unprivileged application to bind with reserved ports.
 .SH SYNOPSIS
 .B privbind
 \fB\-u\fR \fIuser\fR
@@ -15,15 +14,16 @@ server processes are typically run with superuser privileges, which can be
 dropped after binding the reserved port.
 .PP
 .B privbind
-can run a server, right from the start, under an unprivileged non-root
-user with just one extra privilege: the server can bind low ports.
+can execute an application as an unprivileged
+user with just one extra privilege: it can bind to reserved ports.
 .PP
 .B privbind
-is useful in several situations. It can be used when the server code cannot
-be trusted enough to start it as root; It can be used when the server is
-written in a language without the setuid(2) feature (e.g., Java); It
-can also be used to run a server written to remain running as root,
-while all the privileges it really needs is the ability to bind low ports.
+is useful in several situations. It can be used when the application is not
+trusted enough; It can be used when the server is
+written in a language without the setuid(2) feature (e.g., Java(TM)); It
+can also be used to run applications which don't manipulate their own user id
+and need to be able to bind to a reserved port without needing any other root
+privileges.
 .PP
 .SH OPTIONS
 .TP
@@ -31,7 +31,7 @@ while all the privileges it really needs is the ability to bind low ports.
 The
 .B \-u
 option is mandatory, and specifies under which user to run the given command.
-The user can be specified using either a username, or a numeric user id.
+The user can be specified using either a username or a numeric user id.
 It should be an unprivileged (non-root) user.
 .TP
 .B \-g
@@ -40,28 +40,28 @@ option is missing, then the given user's default group is used.
 .TP
 .BR \-n
 .BR privbind 's
-default behaviour is to allow the command being run to do privileged binds
-as many times as it wishes. In order to do that (see "How it works" below),
-the
+default behaviour is to allow the application to call bind(2) with
+reserved ports an unlimited number of times. In order to do that
+(see "How it works" below), the
 .B privbind
-process needs to continue running (as root) as long as the child program
-is running.
+helper process needs to wait for the application to exit before it terminates.
 
 The \fB\-n \fInum\fR option tells
 .B privbind
-that it can assume that only num binds need to be given elevated privileges.
-After this number of binds have been done, 
+that it can assume that only \fInum\fR binds need to be given elevated privileges.
+After this number of bind(2) calls have been executed, 
 .BR privbind 's
-root process will exit, leaving behind only the unprivileged user-specified
-program running.
+helper process will exit, leaving behind only the unprivileged application
+running.
 .TP
 .BR \-h
 Shows a short help screen, and exits.
 .SH "EXIT STATUS"
 Using technical jargon,
 .B privbind
-execs \fIcommand\fR as its main process, running itself in the background. The
-practical upshot of this, in layman terms, is that the user never gets to see
+execs \fIcommand\fR as its main process, running itself in the background (as
+a child of the application's process). The
+practical upshot of this, in layman's terms, is that the user never sees
 \fBprivbind\fR's exit status. When running \fBprivbind\fR, the process will exit
 whenever, and with whatever exit status, \fIcommand\fR does.
 
@@ -69,24 +69,24 @@ The above point should be particularly noted when using \fBprivbind\fR to run da
 
 .SH "SECURITY CONSIDERATIONS"
 \fBprivbind\fR has no SUID parts, and runs within the confines of a single process.
-This serves to minimize the security implications of using it. It is highly advised
+This serves to minimize the security implications of using it. It is strongly advised
 that \fBprivbind\fR \fInot\fR be made SUID, as this would allow any user that can
 run it to run any process as any other (non-root) user. At the moment privbind detects
-such a situation and warns about it, but does not outright prevent it.
+such a situation and warns about it, but will continue with the execution.
 
 .SH "BUGS"
 \fBprivbind\fR currently uses "SOCK_SEQPACKET" for communication between
-privileged and non-privileged processes. This socket type is only, currently,
-implemented on relatively new version of Linux, which makes privbind none
-portable to other platforms.
+privileged and non-privileged processes. This socket type is only
+implemented on Linux kernel 2.6.4 and later, which makes privbind none
+portable to older Linux kernels and many other non-Linux platforms.
 .P
-\fBprivbind\fR currently has a race condition if a multi-process \fIcommand\fR
-calls bind to privileged ports from more than one process simultaneously.
+\fBprivbind\fR currently has a race condition if a multi-threaded \fIcommand\fR
+calls bind to privileged ports from multiple threads simultaneously.
 .P
 At the moment, certain conditions may result in \fIcommand\fR receiving
-signals as a result of actions carried out by \fBprivbind\fR. At the moment,
-the only known case is of SIGPIPE when \fBprivbind\fR is run with the \fB-n\fR
-option.
+signals as a result of actions carried out by \fBprivbind\fR.
+The only known situation is of SIGPIPE when \fBprivbind\fR is run with the
+\fB-n\fR option.
 
 .SH "VERSION"
 The version of
@@ -106,8 +106,13 @@ See the COPYING file for more information and the exact license terms.
 The latest version of this software can be found in
 
     http://sourceforge.net/projects/privbind
+
+.B Java
+is a registered trademark of Sun Microsystems.
+
 .SH "SEE ALSO"
 .BR su (1),
+.BR sudo (8),
 .BR capabilities (7),
 .BR bind (2),
 .BR setuid (2),
