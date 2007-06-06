@@ -291,8 +291,6 @@ int process_parent( int sv[2] )
                                 sizeof request.data.bind.addr);
                     if (reply.data.stat.retval < 0)
                         reply.data.stat.error = errno;
-	            reply.data.stat.calls_left = (options.numbinds == 0) ? -1 :
-		       options.numbinds - 1;
                     if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
                         perror("privbind: send");
                     if (sock > -1 && close(sock))
@@ -375,7 +373,7 @@ int main( int argc, char *argv[] )
                     ret=process_child( sv, argc-skipcount, argv+skipcount );
                 }
             } else {
-                fprintf(stderr, "privbind: helper process terminated with signal %d\n", WTERMSIG(status) );
+                fprintf(stderr, "privbind: root process terminated with signal %d\n", WTERMSIG(status) );
                 ret=2;
             }
         }

@@ -12,7 +12,7 @@ struct ipc_msg_req {
 struct ipc_msg_reply {
     enum { MSG_REP_NONE, MSG_REP_STAT } type;
     union {
-	struct { int retval; int error; int calls_left; } stat;
+	struct { int retval; int error; } stat;
     } data;
 };
 

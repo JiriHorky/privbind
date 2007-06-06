@@ -25,7 +25,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -98,26 +97,16 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 
     int retval=oret;
 
-    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    if ( pthread_mutex_lock(&mutex) ) {
-	errno=EACCES;
-	return oret;
-    }
-
     if( sendmsg( COMM_SOCKET, &msghdr, MSG_NOSIGNAL )>0 ) {
 	/* Request was sent - wait for reply */
 	struct ipc_msg_reply reply;
 	
 	if( recv( COMM_SOCKET, &reply, sizeof(reply), 0 )>0 ) {
-	    pthread_mutex_unlock(&mutex);
 	    retval=reply.data.stat.retval;
 	    if( retval<0 )
 		errno=reply.data.stat.error;
-	    if( reply.data.stat.calls_left == 0 )
-	        master_cleanup();
 	} else {
 	    /* It would appear that the other process has closed, just return the original retval */
-            pthread_mutex_unlock(&mutex);
             master_cleanup();
 	}
     } else {
