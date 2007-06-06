@@ -25,6 +25,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,28 +48,74 @@ static void master_cleanup()
     close(COMM_SOCKET);
 }
 
+/* Aquite or release the lock on the communication socket */
+static int aquire_lock( int aquire )
+{
+   static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+   struct flock lock;
+
+   lock.l_whence=SEEK_SET;
+   lock.l_start=0;
+   lock.l_len=0;
+
+   if( aquire ) {
+      if( pthread_mutex_lock(&mutex)!=0 )
+      {
+         /* The mutex is invalid. Assume we terminated */
+         master_cleanup();
+
+         return 0;
+      }
+
+      /* Aquire the fcntl lock on the socket. Need to retry in case of EINTR */
+      lock.l_type=F_WRLCK;
+
+      int res;
+      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno!=EINTR )
+         ;
+
+      if( res!=0 )
+         pthread_mutex_unlock(&mutex);
+
+      return res==0;
+   } else {
+      /* Need to unlock, opposite order than locking */
+
+      /* Release the fcntl lock */
+      lock.l_type=F_UNLCK;
+      int res;
+
+      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno!=EINTR )
+         ;
+
+      pthread_mutex_unlock(&mutex);
+
+      return res==0;
+   }
+}
+
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
-    /* First of all, attempt the bind. We only need the socket if it fails with access denied */
+   /* First of all, attempt the bind. We only need the socket if it fails with access denied */
 
-    int oret=_bind( sockfd, my_addr, addrlen );
-    if( oret==0 || errno!=EACCES )
-        return oret;
+   int oret=_bind( sockfd, my_addr, addrlen );
+   if( oret==0 || errno!=EACCES )
+      return oret;
 
-    /* Only use this struct after you made sure that it is, indeed, an AF_INET */
-    struct sockaddr_in *in_addr=(struct sockaddr_in *)my_addr;
+   /* Only use this struct after you made sure that it is, indeed, an AF_INET */
+   struct sockaddr_in *in_addr=(struct sockaddr_in *)my_addr;
 
-    /* In most cases, we can let the bind go through as is */
-    if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ) {
-        errno=EACCES;
-	return oret;
-    }
+   /* In most cases, we can let the bind go through as is */
+   if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ) {
+      errno=EACCES;
+      return oret;
+   }
 
-    /* Prepare the ancillary data for passing the actual FD */
-    struct msghdr msghdr={0};
-    struct cmsghdr *cmsg;
-    char buf[CMSG_SPACE(sizeof(int))];
-    int *fdptr;
+   /* Prepare the ancillary data for passing the actual FD */
+   struct msghdr msghdr={0};
+   struct cmsghdr *cmsg;
+   char buf[CMSG_SPACE(sizeof(int))];
+   int *fdptr;
 
     msghdr.msg_control=buf;
     msghdr.msg_controllen=sizeof(buf);
@@ -97,26 +145,30 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 
     int retval=oret;
 
-    if( sendmsg( COMM_SOCKET, &msghdr, MSG_NOSIGNAL )>0 ) {
-	/* Request was sent - wait for reply */
-	struct ipc_msg_reply reply;
-	
-	if( recv( COMM_SOCKET, &reply, sizeof(reply), 0 )>0 ) {
-	    retval=reply.data.stat.retval;
-	    if( retval<0 )
-		errno=reply.data.stat.error;
-	} else {
-	    /* It would appear that the other process has closed, just return the original retval */
-            master_cleanup();
-	}
-    } else {
-	/* An error has occured! */
-	if( errno==EPIPE || errno==ENOTCONN || errno==EBADF ) {
-            master_cleanup();
-	} else {
-	    perror("privbind communication socket error");
-            master_cleanup();
-	}
+    if( aquire_lock(1) ) {
+       if( sendmsg( COMM_SOCKET, &msghdr, MSG_NOSIGNAL )>0 ) {
+          /* Request was sent - wait for reply */
+          struct ipc_msg_reply reply;
+
+          if( recv( COMM_SOCKET, &reply, sizeof(reply), 0 )>0 ) {
+             retval=reply.data.stat.retval;
+             if( retval<0 )
+                errno=reply.data.stat.error;
+          } else {
+             /* It would appear that the other process has closed, just return the original retval */
+             master_cleanup();
+          }
+       } else {
+          /* An error has occured! */
+          if( errno==EPIPE || errno==ENOTCONN || errno==EBADF ) {
+             master_cleanup();
+          } else {
+             perror("privbind communication socket error");
+             master_cleanup();
+          }
+       }
+
+       aquire_lock(0);
     }
 
     /* Make sure we return the original errno, regardless of what caused us to fail */
