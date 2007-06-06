@@ -98,7 +98,7 @@ calls bind to privileged ports from multiple threads simultaneously.
 Certain conditions may result in \fIcommand\fR receiving
 signals as a result of actions carried out by \fBprivbind\fR (i.e.- unexpectedly).
 The only known situation is when \fBprivbind\fR is run with the \fB-n\fR option
-and \fIcommand\fR tries to bind after the root service process has quit. In such
+and \fIcommand\fR tries to bind after the helper process has quit. In such
 a case, command may receive an unexpected SIGPIPE.
 
 .SH "VERSION"
