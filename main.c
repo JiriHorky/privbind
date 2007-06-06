@@ -61,7 +61,7 @@ void help( const char *progname )
 	"-u - Name or id of user to run as (mandatory)\n"
 	"-g - Name or id of group to run as (default: the user's default group)\n"
 	"-n - number of binds to catch. After this many binds have happened,\n"
-        "     all root proccesses exit.\n"
+        "     the helper proccess exits.\n"
         "-l - Explicitly specify the path to the libary to use for preload\n"
         "     This option is for debug use only.\n"
 	"-h - This help screen\n");
@@ -81,6 +81,11 @@ int parse_cmdline( int argc, char *argv[] )
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
+	    if (options.numbinds < 0) {
+	        fprintf(stderr, "Illegal number of binds passed: '%s'\n",
+		  optarg);
+		exit(1);
+	    }
             break;
         case 'u':
             {
@@ -286,6 +291,8 @@ int process_parent( int sv[2] )
                                 sizeof request.data.bind.addr);
                     if (reply.data.stat.retval < 0)
                         reply.data.stat.error = errno;
+	            reply.data.stat.calls_left = (options.numbinds == 0) ? -1 :
+		       options.numbinds - 1;
                     if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
                         perror("privbind: send");
                     if (sock > -1 && close(sock))
@@ -312,7 +319,7 @@ int process_parent( int sv[2] )
 
     /* If we got here, the child has done the number of binds
        specified by the -n option, and we have nothing more to do
-       and should exit, leaving behind no root process */
+       and should exit, leaving behind no helper process */
 
     return 0;
 }
@@ -368,7 +375,7 @@ int main( int argc, char *argv[] )
                     ret=process_child( sv, argc-skipcount, argv+skipcount );
                 }
             } else {
-                fprintf(stderr, "privbind: root process terminated with signal %d\n", WTERMSIG(status) );
+                fprintf(stderr, "privbind: helper process terminated with signal %d\n", WTERMSIG(status) );
                 ret=2;
             }
         }

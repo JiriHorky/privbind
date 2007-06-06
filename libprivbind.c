@@ -34,14 +34,14 @@
 
 #include "ipc.h"
 
-static int master_quit=0; /* Whether root process quit - assume false at first */
+static int master_quit=0; /* Whether helper process quit - assume false at first */
 
 FUNCREDIR1( close, int, int );
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
 
 static void master_cleanup()
 {
-    /* The root process has quit */
+    /* The helper process has quit */
     master_quit=1;
     unsetenv("LD_PRELOAD");
     close(COMM_SOCKET);
@@ -113,6 +113,8 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 	    retval=reply.data.stat.retval;
 	    if( retval<0 )
 		errno=reply.data.stat.error;
+	    if( reply.data.stat.calls_left == 0 )
+	        master_cleanup();
 	} else {
 	    /* It would appear that the other process has closed, just return the original retval */
             pthread_mutex_unlock(&mutex);
