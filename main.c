@@ -44,6 +44,9 @@ struct cmdoptions {
     gid_t gid; /* GID to turn into */
     int numbinds; /* Number of binds to catch before program can make do on its own */
     const char *libname; /* Path to library to use as preload */
+#if DEBUG_TESTING
+    int wait; /* Time to artificially prolong the bind time by */
+#endif
 } options;
 
 void usage( const char *progname )
@@ -64,6 +67,10 @@ void help( const char *progname )
         "     the helper proccess exits.\n"
         "-l - Explicitly specify the path to the libary to use for preload\n"
         "     This option is for debug use only.\n"
+#if DEBUG_TESTING
+        "-w - Delay each bind by num seconds. Only useful for internal privbind\n"
+        "     testing.\n"
+#endif
 	"-h - This help screen\n");
 }
 
@@ -77,7 +84,7 @@ int parse_cmdline( int argc, char *argv[] )
     
     int opt;
 
-    while( (opt=getopt(argc, argv, "+n:u:g:l:h" ))!=-1 ) {
+    while( (opt=getopt(argc, argv, "+n:u:g:l:w:h" ))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
@@ -131,6 +138,11 @@ int parse_cmdline( int argc, char *argv[] )
         case 'l':
             options.libname=optarg;
             break;
+#if DEBUG_TESTING
+        case 'w':
+            options.wait=atoi(optarg);
+            break;
+#endif
         case 'h':
             help(argv[0]);
             exit(0);
@@ -291,6 +303,13 @@ int process_parent( int sv[2] )
                                 sizeof request.data.bind.addr);
                     if (reply.data.stat.retval < 0)
                         reply.data.stat.error = errno;
+                    
+#if DEBUG_TESTING
+                    /* Sleep to check for races */
+                    if( options.wait!=0 )
+                        sleep(options.wait);
+#endif
+
                     if (send(sv[1], &reply, sizeof reply, 0) != sizeof reply)
                         perror("privbind: send");
                     if (sock > -1 && close(sock))

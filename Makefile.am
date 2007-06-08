@@ -15,6 +15,7 @@ libprivbind_la_SOURCES = libprivbind.c
 libprivbind_la_LDFLAGS=-release 0 -ldl
 
 testbind_SOURCES = test.c
+testbind_LDADD = -lpthread
 
 # Record the directory for package libraries
 CLEANFILES=paths.h

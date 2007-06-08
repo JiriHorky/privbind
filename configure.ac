@@ -18,7 +18,7 @@ AC_PROG_LIBTOOL
 # Checks for library functions.
 
 sock_fd_num=497
-AC_MSG_CHECKING([what fd to use for parent-child communication])
+AC_MSG_CHECKING([what default fd to use for parent-child communication])
 AC_ARG_WITH([comm-socket],AC_HELP_STRING([--with-comm-socket=num],[Set the communication socket number]),
 [
 [if [ "$(($withval))" -eq "$withval" ]]
@@ -29,6 +29,15 @@ else
 fi])
 AC_MSG_RESULT($sock_fd_num)
 AC_DEFINE_UNQUOTED(COMM_SOCKET, $sock_fd_num, [Communication socket between parent and child])
+
+AC_MSG_CHECKING([whether to enable internal test-only features])
+AC_ARG_ENABLE([testing],AC_HELP_STRING([--enable-testing],
+   [Enable certain self test features]),
+   [
+      AC_MSG_RESULT([yes])
+      AC_DEFINE(DEBUG_TESTING,1,[Options for internal sanity testing. Do not enable for distributed builds])
+   ],
+   [AC_MSG_RESULT([no])] )
 
 AC_DEFINE(PRELOADLIBNAME, "libprivbind-0.so", [Name for the preload library])
 AC_SUBST(PRELOADLIBNAME, "libprivbind-0.so")
