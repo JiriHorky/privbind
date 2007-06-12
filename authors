@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Translate SVN usernames to readable names for svn2cl -->
+<!-- Use with "svn2cl -\-group-by-day -\-authors=authors" -->
+<authors>
+   <author uid="amosshapira">
+      Amos Shapira &lt;amosshapira@users.sourceforge.net&gt;
+   </author>
+   <author uid="thesun">
+      Shachar Shemesh &lt;thesun@users.sourceforge.net&gt;
+   </author>
+   <author uid="nyh">
+      Nadav Har'el &lt;nyh@users.sourceforge.net&gt;
+   </author>
+   <author uid="sun">
+      Shachar Shemesh &lt;thesun@users.sourceforge.net&gt;
+   </author>
+</authors>

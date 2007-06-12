@@ -1,29 +1,208 @@
-Release 0.2 (June 5, 2007)
-  * Move the preload library to the PKGLIBDIR.
-  * Switch the functions of the fork. Parent is the "child" command, child is
-    the root helper.
-  * Change the libprivbind behavior:
-    * Always run the local bind first, in case it works (who knows?)
-    * Make sure to always return the correct errno, even if we failed on
-      another reason.
-  * Documentation improvements
-    * Moved "How it works" from the man page to the README
-    * Spelling fixes
-  * Make sure that the program cannot close our communicatin fd.
+2007-06-12  Shachar Shemesh <thesun@users.sourceforge.net>
 
-Release 0.1 (May 21, 2007)
+	* [r66] configure.ac: Update version number to 1.0
+	* [r65] privbind.1: Document the "-l" flag in the man page
 
-  * The former branch "amos" (by Amos Shapira) is now the main trunk of the
-    project.
-  * Cleaned up command line processing and usage messages.
-  * Test program test.c now also prints the current user and group (to show that
-    privbind indeed drops privileges correctly).
-  * -g option now accept group name, not just group id. Note that if the -g
-    option is missing, the given user's default group is used.
-  * If the -n option is given, the root process (the parent) exits after these
-    many binds have been performed (previously it stuck around, contrary to
-    what "privbind -h" said). If the child exits prematurely (without binding
-    this number of times and without leaving its end of the socket to another
-    process), privbind still returns its exit code, which is useful when
-    the program being run fails to run.
-  * Added manual page, privbind(1)
+2007-06-08  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r64] Makefile.am, configure.ac, main.c, test.c: Add multi
+	  process and multi thread tests to "test"
+	  Add a configure option "--enable-testing", for internal tests in
+	  privbind
+	  Add optional delay after each bind inside privbind (only if
+	  --enable-testing was used)
+
+2007-06-06  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r63] libprivbind.c: Implement mutex - not tested
+
+2007-06-06  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r62] ipc.h, libprivbind.c, main.c: reverted the changes to use
+	  mutex (r59) and to send number of calls left (r60)
+	  after Shachar mentioned the problem of the application forking
+	  and calling
+	  bind(2) from both processes
+	* [r61] privbind.1: replace "root process" by "helper process".
+	  this is the tail of such changes
+	  I committed in previous checkin.
+	* [r60] ipc.h, libprivbind.c, main.c: the helper process sends the
+	  number of calls left together with its reply, so
+	  the privbind library can cleanly avoid sending more requests
+	* [r59] libprivbind.c: use a mutex to synchronize access to the
+	  socket with the helper process
+
+2007-06-05  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r58] privbind.1: Better wording of the last bug in the manual
+	  Reinstate a "How it works" section which gives a short
+	  description of what privbind does, and direct the user to the
+	  README for more details.
+	* [r57] Makefile.am: Syntactic cleanup of Makefile.am
+	  Install the README file during "make install"
+
+2007-06-05  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r56] privbind.1: (hopefully) improved style, redeability and
+	  length of manual page
+	* [r55] privbind.1: typo
+
+2007-06-05  Nadav Har'el <nyh@users.sourceforge.net>
+
+	* [r54] privbind.1: spelling
+
+2007-06-05  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r53] bootstrap: Reorder the operations in bootstrap so that they
+	  actually bootstrap
+	* [r51] privbind.1: Update the "security considerations" section of
+	  the man page
+	* [r50] ChangeLog, Makefile.am, configure.ac, libprivbind.c:
+	  Prevent the program from closing our communication socket
+	  Cleanup in auto-generation of "paths.h"
+	* [r49] ChangeLog, README, privbind.1: Documentation improvements.
+	  Moved the "how it works" section from the man page to the README
+
+2007-06-02  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r48] ChangeLog, libprivbind.c: Cleanups of libprivbind. Improve
+	  the semantic behaviour.
+	* [r47] Makefile.am: Make sure that "make test" can be used with
+	  different privbind and testbind parameters
+	* [r46] Makefile.am, configure.ac, main.c: Add "test" target that
+	  tests privbind in place.
+	  Added "test-su" and "test-sudo" to automatically elevate to root
+	  for the test
+	* [r45] Makefile.am, test.c: Make the test file more flexible.
+	* [r44] ChangeLog, main.c, test.c: Switch the order of the
+	  processes. Parent now runs the command, child handles the binds
+	* [r43] main.c: Code cleanup - split the parent and child code into
+	  separate functions
+	* [r42] ChangeLog, Makefile.am, configure.ac, main.c, test.c:
+	  Better build of "test" - remove some warnings, add to makefile
+	  (and to "make dist").
+	  Moved the preload library from */lib to */lib/privbind to reduce
+	  shared directory clutter
+
+2007-06-01  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r41] main.c: removed old '-d' option passed to getopts without
+	  being handled by
+	  main()
+
+2007-06-01  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r39] bootstrap, configure.ac: Cleanup warnings on "bootstrap"
+	  rerun
+	  disable (by default) creation of static libraries
+
+2007-05-24  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r38] bootstrap: made bootstrap an executable script
+	* [r37] README: s/low/reserved ports
+
+2007-05-23  Nadav Har'el <nyh@users.sourceforge.net>
+
+	* [r36] README: Added a README
+	* [r35] main.c: Change usage line a bit
+
+2007-05-22  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r34] main.c: more fixes to the assumption that gid 0 is illegal.
+	  I leave uid==0 alone since I'm not sure it makes sense to use
+	  this program
+	  and keep uid 0.
+	* [r33] main.c: added missing help() function parameter type
+	  fixed test for gid value legality - zero is also a legal value
+	* [r32] main.c: fix typo in fixed message
+	* [r31] main.c: improved help message text for -g default
+
+2007-05-22  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r30] ChangeLog, Makefile.am, NEWS: Move the NEWS, which looked
+	  like a changelog, to ChangeLog
+	  Create a stub NEWS
+	  Update Makefile.am so that make dist will work
+
+2007-05-22  Nadav Har'el <nyh@users.sourceforge.net>
+
+	* [r29] NEWS:
+	* [r28] Makefile.am, privbind.1: Add manual page
+
+2007-05-21  Nadav Har'el <nyh@users.sourceforge.net>
+
+	* [r27] main.c: Fix usage line to show that -g option is actually
+	  optional, not mandatory.
+	* [r26] AUTHORS, NEWS, configure.ac, main.c, test.c: Some command
+	  line and other changes (see NEWS)
+	* [r25] .: New trunk, a copy of Amos's branch.
+
+2007-02-16  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r23] branches/amos/main.c, branches/amos/test.c: switch for
+	  SOCK_SEQPACKET so the parent is notified when the child closed
+	  the connection.
+	* [r22] branches/amos/main.c, branches/amos/test.c: some message
+	  cleanup
+	  send MSG_REP_NONE on MSG_REQ_NONE
+	  exit(2) with the same exit value as the child
+	  pay attention to the -n argument
+	  TODO:
+	  1. make '-g' non-mandatory - default to the user's default gid
+	  from /etc/passwd
+	  2. BUG - when privbind isn't root and the child exits on
+	  privilege drop - the parent get blocked on recvmsg. Have to find
+	  the right way to signal the parent to exit. (test: "./privbind -u
+	  1000 -g 1000 -n 1 ./test" - from a regular user)
+
+2007-02-15  Amos Shapira <amosshapira@users.sourceforge.net>
+
+	* [r21] branches/amos/libprivbind.c, branches/amos/main.c,
+	  branches/amos/test.c: now passes back the bind result.
+	  practically functioning.
+	* [r20] branches/amos, branches/amos/libprivbind.c,
+	  branches/amos/main.c, branches/amos/test.c: test.c - added a
+	  simple program which binds to TCP port 987 on local loopback
+	  interface so we can test the library.
+	  libprivbind.c - minor unimportant changes
+	  main.c - added main loop which accepts requests from children and
+	  execute them.
+	  Still to complete returning of bind results in main.c
+
+2006-12-05  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r19] ipc.h, libprivbind.c: Implement client side
+
+2006-12-02  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r18] Makefile.am, libprivbind.c: Add debug outputs
+	  Make sure "dlsym" links
+	* [r17] configure.ac: Fix typo in library name
+	* [r16] libprivbind.c, stub.h: A template "bind" override
+	* [r15] main.c: Add copyright notice to file
+	* [r14] configure.ac, main.c: Move the library name definition to
+	  the configure script
+	* [r13] main.c: Add error message in case exec failed
+	  Add a warning in case privbind is run as SUID
+
+2006-12-01  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r12] Makefile.am, libprivbind.c, main.c: Add the preload library
+	  to the makefiles
+	  Add the priviledge drop
+	* [r11] ., bootstrap, configure.ac: Add libtool support
+	* [r10] main.c: Actually run child process
+	* [r9] configure.ac, main.c: Code for passing the fd to the child
+	* [r8] Makefile.am: Small cleanups
+	* [r7] main.c: Create a communication socket between the processes
+	* [r6] main.c: Allow non-numeric uids
+	* [r5] ., main.c: Perform argument parsing
+
+2006-11-28  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r4] main.c: Argument processing
+	* [r3] ., README: Some more structure cleanup
+	* [r2] ., AUTHORS, COPYING, ChangeLog, INSTALL, Makefile.am, NEWS,
+	  bootstrap, configure.ac, main.c: Basic project structure
+	* [r1] branches, tags, .: Create repository structure
+
