@@ -6,6 +6,7 @@ privbind \- allow an unprivileged application to bind with reserved ports.
 \fB\-u\fR \fIuser\fR
 [ \fB\-g\fR \fIgroup\fR]
 [ \fB\-n\fR \fInum\fR]
+[ \fB\-l\fR \fIpath\fR]
 \fIcommand\fR [ \fIarguments\fR .\|.\|. ]
 .SH DESCRIPTION
 Normally in Linux, only a superuser process can bind an Internet domain socket
@@ -53,6 +54,10 @@ After this number of bind(2) calls have been executed,
 .BR privbind 's
 helper process will exit, leaving behind only the unprivileged application
 running.
+.TP
+.BR \-l
+Mostly for internal use during build. Gives the explicit path to the LD_PRELOAD
+library.
 .TP
 .BR \-h
 Shows a short help screen, and exits.
@@ -104,9 +109,9 @@ a case, command may receive an unexpected SIGPIPE.
 .SH "VERSION"
 The version of
 .B privbind
-described by this manual page is 0.2 (June 5, 2007)
+described by this manual page is 1.0 (June 12, 2007)
 .SH "COPYRIGHT"
-Copyright (C) 2006-2007, Shachar Shemesh.
+Copyright (C) 2006-2007, Shachar Shemesh plus others. See the AUTHORS file.
 
 .B privbind
 was written by Shachar Shemesh, with contributions from Amos Shapira and
