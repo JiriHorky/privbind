@@ -71,8 +71,9 @@ performing a double-fork, and thus running with no parent.
 The second case is when, as before, "-n" caused privbind to terminate prior to
 the actual program terminating. If the program now attempts another bind, it is
 possible that a SIGPIPE will be sent to the process. This signal, again, is one
-not resulting from anything the program did, and may lead to trouble. As of
-version 0.2 of privbind, this problem is not yet handled.
+not resulting from anything the program did, and may lead to trouble. The
+solution is to send the message with the "MSG_NOSIGNAL" option, which prevents
+SIGPIPE from being sent.
 
 The third case of unintended consequences is when using privbind to run a
 daemon. The standard instructions for writing daemons state that a daemon

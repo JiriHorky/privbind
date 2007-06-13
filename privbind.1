@@ -96,15 +96,6 @@ A more detailed explanation is available in the README file.
 privileged and non-privileged processes. This socket type is only
 implemented on Linux kernel 2.6.4 and later, which makes privbind none
 portable to older Linux kernels and many other non-Linux platforms.
-.P
-\fBprivbind\fR has a race condition if a multi-threaded \fIcommand\fR
-calls bind to privileged ports from multiple threads simultaneously.
-.P
-Certain conditions may result in \fIcommand\fR receiving
-signals as a result of actions carried out by \fBprivbind\fR (i.e.- unexpectedly).
-The only known situation is when \fBprivbind\fR is run with the \fB-n\fR option
-and \fIcommand\fR tries to bind after the helper process has quit. In such
-a case, command may receive an unexpected SIGPIPE.
 
 .SH "VERSION"
 The version of
