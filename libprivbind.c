@@ -71,7 +71,7 @@ static int aquire_lock( int aquire )
       lock.l_type=F_WRLCK;
 
       int res;
-      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno!=EINTR )
+      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno==EINTR )
          ;
 
       if( res!=0 )
@@ -85,7 +85,7 @@ static int aquire_lock( int aquire )
       lock.l_type=F_UNLCK;
       int res;
 
-      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno!=EINTR )
+      while( (res=fcntl(COMM_SOCKET, F_SETLKW, &lock))!=0 && errno==EINTR )
          ;
 
       pthread_mutex_unlock(&mutex);
