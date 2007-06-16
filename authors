@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Translate SVN usernames to readable names for svn2cl -->
-<!-- Use with "svn2cl -\-group-by-day -\-authors=authors" -->
+<!-- Use with "svn2cl -\-group-by-day -\-authors=authors -i" -->
 <authors>
    <author uid="amosshapira">
       Amos Shapira &lt;amosshapira@users.sourceforge.net&gt;

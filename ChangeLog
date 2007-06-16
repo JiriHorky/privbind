@@ -1,5 +1,17 @@
+2007-06-16  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r72] configure.ac: Update version information to 1.1
+
+2007-06-13  Shachar Shemesh <thesun@users.sourceforge.net>
+
+	* [r71] NEWS: Update the NEWS file to announce the release.
+	* [r70] README, privbind.1: Update the docs regarding bugs that
+	  have been resolved
+	* [r69] libprivbind.c: Fix bug on fcntl returning EINTR.
+
 2007-06-12  Shachar Shemesh <thesun@users.sourceforge.net>
 
+	* [r67] ChangeLog, authors: Update the changelog
 	* [r66] configure.ac: Update version number to 1.0
 	* [r65] privbind.1: Document the "-l" flag in the man page
 
