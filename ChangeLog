@@ -4,6 +4,8 @@
         * Major cleanup of the build system. No point for SONAME of preload
           only library. Record pkglibdir path in config.h rather than
           specialized paths.h
+        * Install privbind into sbin rather than bin (only root can really run
+          it)
 
 2007-06-16  Shachar Shemesh <thesun@users.sourceforge.net>
 

@@ -1,4 +1,4 @@
-bin_PROGRAMS = privbind
+sbin_PROGRAMS = privbind
 pkglib_LTLIBRARIES = privbind.la
 noinst_PROGRAMS = testbind
 
