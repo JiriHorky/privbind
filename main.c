@@ -99,7 +99,7 @@ int parse_cmdline( int argc, char *argv[] )
                 if( pw!=NULL ) {
                     options.uid=pw->pw_uid;
                     /* set the user's default group */
-                    if( options.gid==-1 ) {
+                    if( options.gid==(gid_t)-1 ) {
                         options.gid=pw->pw_gid;
                     }
                 } else {
@@ -127,7 +127,7 @@ int parse_cmdline( int argc, char *argv[] )
                         fprintf(stderr, "Group name '%s' not found\n", optarg);
                         exit(1);
                     }
-                    if( options.gid < 0 ) {
+                    if( options.gid==(gid_t)-1 ) {
                         fprintf(stderr, "Illegal group id %d\n", options.gid);
                         exit(1);
                     }
@@ -156,7 +156,7 @@ int parse_cmdline( int argc, char *argv[] )
         usage(argv[0]);
         exit(1);
     }
-    if(options.gid==-1){
+    if(options.gid==(gid_t)-1){
         fprintf(stderr, "Missing GID (-g) option.\n");
         usage(argv[0]);
         exit(1);
@@ -262,12 +262,12 @@ int process_parent( int sv[2] )
 
     /* wait for request from the child */
     do {
-        struct msghdr msghdr={0};
+        struct msghdr msghdr={.msg_name=NULL};
         struct cmsghdr *cmsg;
         char buf[CMSG_SPACE(sizeof(int))];
         struct ipc_msg_req request;
         struct iovec iov;
-        struct ipc_msg_reply reply = {0};
+        struct ipc_msg_reply reply = {.type=MSG_REP_NONE};
         int recvbytes;
 
         msghdr.msg_control=buf;

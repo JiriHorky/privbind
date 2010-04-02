@@ -112,7 +112,7 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
    }
 
    /* Prepare the ancillary data for passing the actual FD */
-   struct msghdr msghdr={0};
+   struct msghdr msghdr={.msg_name=NULL};
    struct cmsghdr *cmsg;
    char buf[CMSG_SPACE(sizeof(int))];
    int *fdptr;
