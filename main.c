@@ -33,7 +33,6 @@
 #include <string.h>
 
 #include "config.h"
-#include "paths.h"
 #include "ipc.h"
 
 #define FALSE (0!=0)

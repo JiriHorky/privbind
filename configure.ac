@@ -4,7 +4,7 @@
 AC_PREREQ(2.57)
 AC_INIT([privbind],[1.1])
 AM_INIT_AUTOMAKE
-AC_COPYRIGHT([Copyright (C) 2006-2007 Shachar Shemesh])
+AC_COPYRIGHT([Copyright (C) 2006-2007,2010 Shachar Shemesh])
 
 # Checks for programs.
 AC_PROG_CC
@@ -39,8 +39,13 @@ AC_ARG_ENABLE([testing],AC_HELP_STRING([--enable-testing],
    ],
    [AC_MSG_RESULT([no])] )
 
-AC_DEFINE(PRELOADLIBNAME, "libprivbind-0.so", [Name for the preload library])
-AC_SUBST(PRELOADLIBNAME, "libprivbind-0.so")
+AC_SUBST(PRELOADLIBNAME, "privbind.so")
+AC_DEFINE_UNQUOTED(PRELOADLIBNAME, "$PRELOADLIBNAME", [Name for the preload library])
+
+dnl Define pkglibdir as it is defined by automake
+[pkglibdir="$libdir/$PACKAGE"]
+AS_AC_EXPAND(PKGLIBDIR, "$pkglibdir")
+AC_DEFINE_UNQUOTED(PKGLIBDIR, "$PKGLIBDIR", [Directory where the package libraries are stored])
 
 AC_CONFIG_FILES(Makefile)
 AM_CONFIG_HEADER(config.h)

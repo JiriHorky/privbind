@@ -1,6 +1,9 @@
 2010-04-02  Shachar Shemesh <thesun@users.sourceforge.net>
         * [r73] Fix a one off buffer overrun: reported by Christian Jaeger
           http://bugs.debian.org/576244
+        * Major cleanup of the build system. No point for SONAME of preload
+          only library. Record pkglibdir path in config.h rather than
+          specialized paths.h
 
 2007-06-16  Shachar Shemesh <thesun@users.sourceforge.net>
 
