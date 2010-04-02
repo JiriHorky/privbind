@@ -207,7 +207,7 @@ int process_child( int sv[2], int argc, char *argv[] )
     if( ldpreload==NULL ) {
         setenv("LD_PRELOAD", options.libname, FALSE );
     } else {
-        char *newpreload=malloc(strlen(ldpreload)+strlen(options.libname)+1);
+        char *newpreload=malloc(strlen(ldpreload)+strlen(options.libname)+2); /* One extra for the ":", another for the NULL */
         if( newpreload==NULL ) {
             fprintf(stderr, "privbind: Error creating preload environment - out of memory\n");
             return 2;
