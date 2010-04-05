@@ -1,4 +1,4 @@
-.TH privbind 1 "22 May 2007" "Privbind 0.1" ""
+.TH privbind 1 "5 April 2010" "Privbind" ""
 .SH NAME
 privbind \- allow an unprivileged application to bind with reserved ports.
 .SH SYNOPSIS
@@ -87,7 +87,7 @@ privileges and runs (exec(2)) the command, the other remains as root.
 \fBPrivbind\fR uses LD_PRELOAD to intercept every call to bind(2) made
 by the program. Calls that can be completed non-privileged are done so.
 Calls that require root privileges are forwarded to the root process, that
-carry them out on the program's behalf.
+carries them out on behalf of the program.
 
 A more detailed explanation is available in the README file.
 
