@@ -260,6 +260,15 @@ int process_parent( int sv[2] )
     /* Close the child socket */
     close(sv[0]);
 
+    /* Don't hold on to resources that we will not use */
+    chdir("/");
+    close(0);
+    close(1);
+    /* do not close(2) as we still use stderr */
+    
+    /* Don't be killed by signals sent to the previous process group */
+    setsid();
+
     /* wait for request from the child */
     do {
         struct msghdr msghdr={.msg_name=NULL};
