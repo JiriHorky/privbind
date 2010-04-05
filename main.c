@@ -64,7 +64,7 @@ void help( const char *progname )
 	"-g - Name or id of group to run as (default: the user's default group)\n"
 	"-n - number of binds to catch. After this many binds have happened,\n"
         "     the helper proccess exits.\n"
-        "-l - Explicitly specify the path to the libary to use for preload\n"
+        "-l - Explicitly specify the path to the library to use for preload\n"
         "     This option is for debug use only.\n"
 #if DEBUG_TESTING
         "-w - Delay each bind by num seconds. Only useful for internal privbind\n"
