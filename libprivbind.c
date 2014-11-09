@@ -102,11 +102,11 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
    if( oret==0 || errno!=EACCES )
       return oret;
 
-   /* Only use this struct after you made sure that it is, indeed, an AF_INET */
-   struct sockaddr_in *in_addr=(struct sockaddr_in *)my_addr;
-
    /* In most cases, we can let the bind go through as is */
-   if( master_quit || my_addr->sa_family!=AF_INET || addrlen<sizeof(struct sockaddr_in) ) {
+   if( master_quit || (my_addr->sa_family!=AF_INET && my_addr->sa_family!=AF_INET6) 
+       || (my_addr->sa_family==AF_INET && addrlen<sizeof(struct sockaddr_in)) 
+       || (my_addr->sa_family==AF_INET6 && addrlen<sizeof(struct sockaddr_in6))  
+     ) { 
       errno=EACCES;
       return oret;
    }
@@ -141,7 +141,12 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
     iov.iov_len=sizeof(request);
 
     request.type=MSG_REQ_BIND;
-    request.data.bind.addr=*in_addr;
+
+    /* Check family of the request, only INET and INET6 should make it here */
+    if (my_addr->sa_family==AF_INET)
+      request.data.bind4.addr=*(struct sockaddr_in *) my_addr;
+    else if (my_addr->sa_family==AF_INET6)
+      request.data.bind6.addr=*(struct sockaddr_in6 *) my_addr;
 
     int retval=oret;
 

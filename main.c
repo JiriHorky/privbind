@@ -344,9 +344,18 @@ int process_parent( int sv[2] )
                     else {
                         sock = -1;
                     }
+                    int size;
+                    if ( ((struct sockaddr)request.data.bind.addr).sa_family == AF_INET ) {
+                        size = sizeof(struct sockaddr_in);
+                    } else if ( ((struct sockaddr)request.data.bind.addr).sa_family == AF_INET6) {
+                        size = sizeof(struct sockaddr_in6);
+                    } else {
+                        perror("privbind: Invalid inet family type");
+                        break;
+                    }
+
                     reply.data.stat.retval =
-                        bind(sock, (struct sockaddr *)&request.data.bind.addr,
-                                sizeof request.data.bind.addr);
+                        bind(sock, (struct sockaddr *)&request.data.bind.addr, size);
                     if (reply.data.stat.retval < 0)
                         reply.data.stat.error = errno;
                     
