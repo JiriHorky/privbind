@@ -37,10 +37,15 @@
 
 #define FALSE (0!=0)
 #define TRUE (0==0)
+#define MAX_GROUPS 32
+#define UNDEF (-1)
 
 struct cmdoptions {
     uid_t uid; /* UID to turn into */
     gid_t gid; /* GID to turn into */
+    gid_t groups[MAX_GROUPS]; /* Supplemenetary groups to set up */
+    int   num_groups; /* number of supplementary gruops */
+    char disable_supp_groups; /*Whether to set supplementary groups or not */
     int numbinds; /* Number of binds to catch before program can make do on its own */
     const char *libname; /* Path to library to use as preload */
 #if DEBUG_TESTING
@@ -50,7 +55,7 @@ struct cmdoptions {
 
 void usage( const char *progname )
 {
-    fprintf(stderr, "Usage: %s -u UID [-g GID] [-n NUM] command [arguments ...]\n", progname);
+    fprintf(stderr, "Usage: %s -u UID [-g GID] [-G] [-n NUM] command [arguments ...]\n", progname);
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
 void help( const char *progname )
@@ -62,6 +67,7 @@ void help( const char *progname )
     printf("\n"
 	"-u - Name or id of user to run as (mandatory)\n"
 	"-g - Name or id of group to run as (default: the user's default group)\n"
+	"-G - Disables setting user's supplementary groups (default: enabled)\n"
 	"-n - number of binds to catch. After this many binds have happened,\n"
         "     the helper proccess exits.\n"
         "-l - Explicitly specify the path to the library to use for preload\n"
@@ -79,11 +85,15 @@ int parse_cmdline( int argc, char *argv[] )
     options.numbinds=0;
     options.uid=0;
     options.gid=-1;
+    memset(options.groups, UNDEF, MAX_GROUPS);
+    options.num_groups = MAX_GROUPS;
+    options.disable_supp_groups=0;
     options.libname=PKGLIBDIR "/" PRELOADLIBNAME;
+    char * username;
     
     int opt;
 
-    while( (opt=getopt(argc, argv, "+n:u:g:l:w:h" ))!=-1 ) {
+    while( (opt=getopt(argc, argv, "+n:u:g:Gl:w:h" ))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
@@ -95,17 +105,33 @@ int parse_cmdline( int argc, char *argv[] )
             break;
         case 'u':
             {
-                struct passwd *pw=getpwnam(optarg);
+                username = optarg;
+                struct passwd *pw=getpwnam(username);
                 if( pw!=NULL ) {
                     options.uid=pw->pw_uid;
-                    /* set the user's default group */
-                    if( options.gid==(gid_t)-1 ) {
-                        options.gid=pw->pw_gid;
-                    }
                 } else {
                     options.uid=atoi(optarg);
-                    if( options.uid==0 ) {
-                        fprintf(stderr, "Username '%s' not found\n", optarg);
+                    char * errp = 1;
+		    options.uid= strtol(username,  &errp, 10);
+                    if (errp == username || errp != NULL) {
+                        fprintf(stderr, "Could not resolve username %s as string nor as UID\n", username);
+                        exit(1);
+                    }
+                    pw = getpwuid(options.uid);
+                    if( pw == NULL ) {
+                        fprintf(stderr, "User with UID '%d' not found\n", options.uid);
+                        exit(1);
+                    } else {
+                        username = pw->pw_name;
+                    }
+                }
+                /* set the user's default group */
+                if( options.gid==(gid_t)UNDEF ) {
+                    options.gid=pw->pw_gid;
+                }
+                if ( ! options.disable_supp_groups ) {
+                    if ( getgrouplist(pw->pw_name, pw->pw_gid, options.groups, &(options.num_groups)) == -1) {
+                        fprintf(stderr, "Error getting list of groups for user %s. Maybe he is member of too too many groups? The limit is %d.\n", optarg, MAX_GROUPS); 
                         exit(1);
                     }
                 }
@@ -127,12 +153,16 @@ int parse_cmdline( int argc, char *argv[] )
                         fprintf(stderr, "Group name '%s' not found\n", optarg);
                         exit(1);
                     }
-                    if( options.gid==(gid_t)-1 ) {
+                    if( options.gid==(gid_t)UNDEF ) {
                         fprintf(stderr, "Illegal group id %d\n", options.gid);
                         exit(1);
                     }
                 }
             }
+            break;
+        case 'G':
+            options.disable_supp_groups=1;
+            memset(options.groups, UNDEF, MAX_GROUPS);
             break;
         case 'l':
             options.libname=optarg;
@@ -156,8 +186,8 @@ int parse_cmdline( int argc, char *argv[] )
         usage(argv[0]);
         exit(1);
     }
-    if(options.gid==(gid_t)-1){
-        fprintf(stderr, "Missing GID (-g) option.\n");
+    if(options.gid==(gid_t)UNDEF){
+        fprintf(stderr, "Unable to find group which to run as.\n");
         usage(argv[0]);
         exit(1);
     }
@@ -176,10 +206,18 @@ int parse_cmdline( int argc, char *argv[] )
 int process_child( int sv[2], int argc, char *argv[] )
 {
     /* Drop privileges */
-    if( setgroups(0, NULL )<0 ) {
-        perror("privbind: setgroups");
-        return 2;
+    if(options.disable_supp_groups) {
+            if( setgroups(0, NULL )<0 ) {
+                perror("privbind: error dropping supplementary groups");
+                return 2;
+            }
+    } else {
+        if (setgroups(options.num_groups, options.groups)  != 0) {
+                perror("privbind: error setting supplementary groups");
+                return 2;
+        }
     }
+
     if( setgid(options.gid)<0 ) {
         perror("privbind: setgid");
         close(sv[0]);

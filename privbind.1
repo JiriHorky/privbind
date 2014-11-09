@@ -39,6 +39,9 @@ It should be an unprivileged (non-root) user.
 Specifies the group to switch to when running the given command. If this
 option is missing, then the given user's default group is used.
 .TP
+.B \-G
+Disables setting user's supplementary groups (default: enabled)
+.TP
 .BR \-n
 .BR privbind 's
 default behaviour is to allow the application to call bind(2) with
