@@ -111,7 +111,7 @@ int parse_cmdline( int argc, char *argv[] )
                     options.uid=pw->pw_uid;
                 } else {
                     options.uid=atoi(optarg);
-                    char * errp = 1;
+                    char * errp = (char*) 1;
 		    options.uid= strtol(username,  &errp, 10);
                     if (errp == username || errp != NULL) {
                         fprintf(stderr, "Could not resolve username %s as string nor as UID\n", username);
