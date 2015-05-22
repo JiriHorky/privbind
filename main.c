@@ -85,7 +85,7 @@ int parse_cmdline( int argc, char *argv[] )
     options.numbinds=0;
     options.uid=0;
     options.gid=-1;
-    memset(options.groups, UNDEF, MAX_GROUPS);
+    memset(options.groups, UNDEF, MAX_GROUPS*sizeof(gid_t));
     options.num_groups = MAX_GROUPS;
     options.disable_supp_groups=0;
     options.libname=PKGLIBDIR "/" PRELOADLIBNAME;
@@ -162,7 +162,7 @@ int parse_cmdline( int argc, char *argv[] )
             break;
         case 'G':
             options.disable_supp_groups=1;
-            memset(options.groups, UNDEF, MAX_GROUPS);
+            memset(options.groups, UNDEF, MAX_GROUPS*sizeof(gid_t));
             break;
         case 'l':
             options.libname=optarg;
