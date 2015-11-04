@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <string.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,6 +37,7 @@
 #include "ipc.h"
 
 static int master_quit=0; /* Whether helper process quit - assume false at first */
+static int reuse_port=-1; /* if we should setup SO_REUSEPORT socket option */
 
 FUNCREDIR1( close, int, int );
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
@@ -96,6 +98,18 @@ static int acquire_lock( int acquire )
 
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
+#ifdef SO_REUSEPORT
+   /**/
+   if (reuse_port < 0){
+     char *env_reuse = getenv("PRIVBIND_REUSE_PORT");
+     reuse_port = env_reuse != NULL && strlen(env_reuse) == 1 && env_reuse[0] == '1';
+   }
+   if (reuse_port){
+     int optval = 1;
+     setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+   }
+#endif
+  
    /* First of all, attempt the bind. We only need the socket if it fails with access denied */
 
    int oret=_bind( sockfd, my_addr, addrlen );

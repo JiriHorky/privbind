@@ -72,6 +72,9 @@ void help( const char *progname )
         "     the helper proccess exits.\n"
         "-l - Explicitly specify the path to the library to use for preload\n"
         "     This option is for debug use only.\n"
+#ifdef SO_REUSEPORT
+        "-r - setup SO_REUSEPORT option to all sockets before binding it to address\n"
+#endif
 #if DEBUG_TESTING
         "-w - Delay each bind by num seconds. Only useful for internal privbind\n"
         "     testing.\n"
@@ -93,7 +96,7 @@ int parse_cmdline( int argc, char *argv[] )
     
     int opt;
 
-    while( (opt=getopt(argc, argv, "+n:u:g:Gl:w:h" ))!=-1 ) {
+    while( (opt=getopt(argc, argv, "+n:u:g:Gl:w:h:r" ))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
@@ -170,6 +173,11 @@ int parse_cmdline( int argc, char *argv[] )
 #if DEBUG_TESTING
         case 'w':
             options.wait=atoi(optarg);
+            break;
+#endif
+#ifdef SO_REUSEPORT
+        case 'r':
+            setenv("PRIVBIND_REUSE_PORT", "1", FALSE );
             break;
 #endif
         case 'h':
