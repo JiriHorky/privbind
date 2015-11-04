@@ -102,11 +102,13 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
    /**/
    if (reuse_port < 0){
      char *env_reuse = getenv("PRIVBIND_REUSE_PORT");
-     reuse_port = env_reuse != NULL && strlen(env_reuse) == 1 && env_reuse[0] == '1';
+     reuse_port = (env_reuse != NULL && strlen(env_reuse) == 1 && env_reuse[0] == '1');
    }
    if (reuse_port){
      int optval = 1;
-     setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+     int retval = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+     if (retval != 0)
+       return retval;
    }
 #endif
   
