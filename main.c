@@ -85,7 +85,7 @@ int parse_cmdline( int argc, char *argv[] )
     options.numbinds=0;
     options.uid=0;
     options.gid=-1;
-    memset(options.groups, UNDEF, MAX_GROUPS);
+    memset(options.groups, UNDEF, MAX_GROUPS*sizeof(gid_t));
     options.num_groups = MAX_GROUPS;
     options.disable_supp_groups=0;
     options.libname=PKGLIBDIR "/" PRELOADLIBNAME;
@@ -111,7 +111,7 @@ int parse_cmdline( int argc, char *argv[] )
                     options.uid=pw->pw_uid;
                 } else {
                     options.uid=atoi(optarg);
-                    char * errp = 1;
+                    char * errp = (char*) 1;
 		    options.uid= strtol(username,  &errp, 10);
                     if (errp == username || errp != NULL) {
                         fprintf(stderr, "Could not resolve username %s as string nor as UID\n", username);
@@ -162,7 +162,7 @@ int parse_cmdline( int argc, char *argv[] )
             break;
         case 'G':
             options.disable_supp_groups=1;
-            memset(options.groups, UNDEF, MAX_GROUPS);
+            memset(options.groups, UNDEF, MAX_GROUPS*sizeof(gid_t));
             break;
         case 'l':
             options.libname=optarg;
