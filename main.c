@@ -56,7 +56,12 @@ struct cmdoptions {
 
 void usage( const char *progname )
 {
-    fprintf(stderr, "Usage: %s -u UID [-g GID] [-G] [-n NUM] [-r PORTS] command [arguments ...]\n", progname);
+    fprintf(stderr, "Usage: %s -u UID [-g GID] [-G] [-n NUM] ", progname);
+#ifdef SO_REUSEPORT    
+    fprintf(stderr, "[-r PORTS] ");
+#endif
+    fprintf(stderr, "command [arguments ...]\n");
+    
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
 void help( const char *progname )
@@ -97,8 +102,30 @@ int parse_cmdline( int argc, char *argv[] )
     intlist_t l;
     
     int opt;
-
-    while( (opt=getopt(argc, argv, "+n:u:g:Gl:w:h:r:" ))!=-1 ) {
+    
+    // 'w' and 'r' options are optional
+    char * _shortopts = "+n:u:g:Gl:h";
+    int opts_len = strlen(_shortopts);
+    char * shortopts = malloc(opts_len + 1 + 4); // allocate enough space for optional options
+    if (shortopts == 0){
+      fprintf(stderr, "Can't allocate memory\n");
+      exit(1);
+    }
+    strcpy(shortopts, _shortopts);
+#if DEBUG_TESTING
+    shortopts[opts_len] = 'w';
+    shortopts[opts_len + 1] = ':';
+    shortopts[opts_len + 2] = 0;
+    opts_len += 2;
+#endif
+#ifdef SO_REUSEPORT
+    shortopts[opts_len] = 'r';
+    shortopts[opts_len + 1] = ':';
+    shortopts[opts_len + 2] = 0;
+    opts_len += 2;
+#endif
+    
+    while( (opt=getopt(argc, argv, shortopts))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
@@ -193,7 +220,8 @@ int parse_cmdline( int argc, char *argv[] )
             exit(1);
         }
     }
-
+    free(shortopts);
+    
     if(options.uid==0){
         fprintf(stderr, "Missing UID (-u) option.\n");
         usage(argv[0]);
