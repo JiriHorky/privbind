@@ -20,8 +20,8 @@
 
 #include <stdbool.h>
 
-#ifndef LISTPARSER_H
-#define	LISTPARSER_H
+#ifndef LIST_H
+#define	LIST_H
 
 #ifdef	__cplusplus
 extern "C" {
@@ -37,12 +37,25 @@ typedef struct
 intlist_t;
 
 /**
+ * Parse string "str" with comma separated list of numbers and fills up 
+ * list structure.
  * 
  * @param str - zero ended string contains comma separated numbers
  * @param list - 
  * @return non-zero if some error occurs
  */
-int parselist(char *str, intlist_t * list);
+int parseintlist(char *str, intlist_t * list);
+
+/**
+ * Same as previos. Numbers in list have to be in given range (inclusive).
+ * 
+ * @param str - zero ended string contains comma separated numbers
+ * @param list
+ * @param min_value - minimum value (inclusive)
+ * @param max_value - maximum value (inclusive)
+ * @return 
+ */
+int parselist(char *str, intlist_t * list, int min_value, int max_value);
 
 /**
  * @param list
@@ -55,5 +68,5 @@ bool is_in_list(const intlist_t * list, int value);
 }
 #endif
 
-#endif	/* LISTPARSER_H */
+#endif	/* LIST_H */
 

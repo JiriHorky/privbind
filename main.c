@@ -205,7 +205,7 @@ int parse_cmdline( int argc, char *argv[] )
 #endif
 #ifdef SO_REUSEPORT
         case 'r':
-            if (parselist(optarg, &l) != 0){
+            if (parselist(optarg, &l, 1, 65535) != 0){
                 fprintf(stderr, "Can't parse list of ports\n");
                 exit(1);
             }

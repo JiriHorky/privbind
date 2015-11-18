@@ -105,7 +105,7 @@ int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
      if (env_reuse == NULL){
        reuse_ports.count = 0;
      }else{
-       if (parselist(env_reuse, &reuse_ports) != 0){
+       if (parselist(env_reuse, &reuse_ports, 1, 65535) != 0){
          reuse_ports.count = -1;
          return -1;
        }

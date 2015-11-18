@@ -22,10 +22,15 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include "list.h"
 
-int parselist(char *str, intlist_t * list) {
+int parseintlist(char *str, intlist_t * list) {
+  return parselist(str, list, INT_MIN, INT_MAX);
+}
+
+int parselist(char *str, intlist_t * list, int min_value, int max_value) {
 
   int len = strlen(str);
   char *tmp = malloc(len + 1);
@@ -44,7 +49,7 @@ int parselist(char *str, intlist_t * list) {
     }
   }
   list->values = malloc(list->count * sizeof (int));
-  if (tmp == NULL) {
+  if (list->values == NULL) {
     fprintf(stderr, "privbind: Error parsing list - out of memory\n");
     goto fail;
   }
@@ -56,14 +61,15 @@ int parselist(char *str, intlist_t * list) {
       char *ptr;
       long int l = strtol(num_start, &ptr, 10);
       if (num_start == ptr || *ptr != 0) {
-        fprintf(stderr, "privbind: Can't parse list of numbers\n");
+        fprintf(stderr, "privbind: Can't parse list of numbers. It is a number list?\n");
+        goto fail_result;
+      }
+      if ( l < ((long int) min_value) || l > ((long int) max_value) ) {
+        fprintf(stderr, "privbind: Can't parse list of numbers. Number %d is out of range <%d, %d>.\n", 
+                l, min_value, max_value);
         goto fail_result;
       }
       list->values[i] = (int) l;
-      if (((long int) list->values[i]) != l) {
-        fprintf(stderr, "privbind: Can't parse list of numbers\n");
-        goto fail_result;
-      }
       i++;
       num_start = tmp + pos + 1;
     }
