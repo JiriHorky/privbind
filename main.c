@@ -34,6 +34,7 @@
 
 #include "config.h"
 #include "ipc.h"
+#include "list.h"
 
 #define FALSE (0!=0)
 #define TRUE (0==0)
@@ -55,7 +56,12 @@ struct cmdoptions {
 
 void usage( const char *progname )
 {
-    fprintf(stderr, "Usage: %s -u UID [-g GID] [-G] [-n NUM] command [arguments ...]\n", progname);
+    fprintf(stderr, "Usage: %s -u UID [-g GID] [-G] [-n NUM] ", progname);
+#ifdef SO_REUSEPORT    
+    fprintf(stderr, "[-r PORTS] ");
+#endif
+    fprintf(stderr, "command [arguments ...]\n");
+    
     fprintf(stderr, "Run '%s -h' for more information.\n", progname);
 }
 void help( const char *progname )
@@ -65,18 +71,21 @@ void help( const char *progname )
     printf("     able to bind to low ports.\n");
     printf("Usage: %s -u UID [-g GID] [-n NUM] command [arguments ...]\n", progname);
     printf("\n"
-	"-u - Name or id of user to run as (mandatory)\n"
-	"-g - Name or id of group to run as (default: the user's default group)\n"
-	"-G - Disables setting user's supplementary groups (default: enabled)\n"
-	"-n - number of binds to catch. After this many binds have happened,\n"
+        "-u - Name or id of user to run as (mandatory)\n"
+        "-g - Name or id of group to run as (default: the user's default group)\n"
+        "-G - Disables setting user's supplementary groups (default: enabled)\n"
+        "-n - number of binds to catch. After this many binds have happened,\n"
         "     the helper proccess exits.\n"
         "-l - Explicitly specify the path to the library to use for preload\n"
         "     This option is for debug use only.\n"
+#ifdef SO_REUSEPORT
+        "-r - comma separated list of ports for those SO_REUSEPORT option will be setup\n"
+#endif
 #if DEBUG_TESTING
         "-w - Delay each bind by num seconds. Only useful for internal privbind\n"
         "     testing.\n"
 #endif
-	"-h - This help screen\n");
+        "-h - This help screen\n");
 }
 
 int parse_cmdline( int argc, char *argv[] )
@@ -90,18 +99,40 @@ int parse_cmdline( int argc, char *argv[] )
     options.disable_supp_groups=0;
     options.libname=PKGLIBDIR "/" PRELOADLIBNAME;
     char * username;
+    intlist_t l;
     
     int opt;
-
-    while( (opt=getopt(argc, argv, "+n:u:g:Gl:w:h" ))!=-1 ) {
+    
+    // 'w' and 'r' options are optional
+    char * _shortopts = "+n:u:g:Gl:h";
+    int opts_len = strlen(_shortopts);
+    char * shortopts = malloc(opts_len + 1 + 4); // allocate enough space for optional options
+    if (shortopts == 0){
+      fprintf(stderr, "Can't allocate memory\n");
+      exit(1);
+    }
+    strcpy(shortopts, _shortopts);
+#if DEBUG_TESTING
+    shortopts[opts_len] = 'w';
+    shortopts[opts_len + 1] = ':';
+    shortopts[opts_len + 2] = 0;
+    opts_len += 2;
+#endif
+#ifdef SO_REUSEPORT
+    shortopts[opts_len] = 'r';
+    shortopts[opts_len + 1] = ':';
+    shortopts[opts_len + 2] = 0;
+    opts_len += 2;
+#endif
+    
+    while( (opt=getopt(argc, argv, shortopts))!=-1 ) {
         switch(opt) {
         case 'n':
             options.numbinds=atoi(optarg);
-	    if (options.numbinds < 0) {
-	        fprintf(stderr, "Illegal number of binds passed: '%s'\n",
-		  optarg);
-		exit(1);
-	    }
+            if (options.numbinds < 0) {
+                fprintf(stderr, "Illegal number of binds passed: '%s'\n", optarg);
+                exit(1);
+            }
             break;
         case 'u':
             {
@@ -112,7 +143,7 @@ int parse_cmdline( int argc, char *argv[] )
                 } else {
                     options.uid=atoi(optarg);
                     char * errp = (char*) 1;
-		    options.uid= strtol(username,  &errp, 10);
+                    options.uid= strtol(username,  &errp, 10);
                     if (errp == username || errp != NULL) {
                         fprintf(stderr, "Could not resolve username %s as string nor as UID\n", username);
                         exit(1);
@@ -172,6 +203,15 @@ int parse_cmdline( int argc, char *argv[] )
             options.wait=atoi(optarg);
             break;
 #endif
+#ifdef SO_REUSEPORT
+        case 'r':
+            if (parselist(optarg, &l, 1, 65535) != 0){
+                fprintf(stderr, "Can't parse list of ports\n");
+                exit(1);
+            }
+            setenv("PRIVBIND_REUSE_PORTS", optarg, FALSE );
+            break;
+#endif
         case 'h':
             help(argv[0]);
             exit(0);
@@ -180,7 +220,8 @@ int parse_cmdline( int argc, char *argv[] )
             exit(1);
         }
     }
-
+    free(shortopts);
+    
     if(options.uid==0){
         fprintf(stderr, "Missing UID (-u) option.\n");
         usage(argv[0]);

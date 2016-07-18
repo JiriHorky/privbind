@@ -1,16 +1,22 @@
 sbin_PROGRAMS = privbind
 pkglib_LTLIBRARIES = privbind.la
 noinst_PROGRAMS = testbind
+noinst_LTLIBRARIES = list.la
 
 doc_DATA = README
 man_MANS = privbind.1
 EXTRA_DIST = $(man_MANS)
 
-privbind_SOURCES = main.c
-noinst_HEADERS = ipc.h stub.h
+list_la_SOURCES = list.c
+list_la_LDFLAGS=-ldl -module -avoid-version 
+LDADD = list.la
 
-privbind_la_SOURCES = libprivbind.c
-privbind_la_LDFLAGS=-ldl -module -avoid-version
+privbind_SOURCES = main.c
+noinst_HEADERS = ipc.h stub.h list.h
+
+privbind_la_SOURCES = libprivbind.c 
+privbind_la_LIBADD = list.la
+privbind_la_LDFLAGS=-ldl -module -avoid-version 
 
 testbind_SOURCES = test.c
 testbind_LDADD = -lpthread

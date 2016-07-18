@@ -27,15 +27,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <string.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "stub.h"
-
 #include "ipc.h"
+#include "list.h"
 
 static int master_quit=0; /* Whether helper process quit - assume false at first */
+static intlist_t reuse_ports={.count = -1}; /* for which ports we should setup SO_REUSEPORT socket option */
 
 FUNCREDIR1( close, int, int );
 FUNCREDIR3( bind, int, int, const struct sockaddr *, socklen_t );
@@ -96,6 +98,36 @@ static int acquire_lock( int acquire )
 
 int bind( int sockfd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
+#ifdef SO_REUSEPORT
+   // parse environment property (just once)
+   if (reuse_ports.count < 0){
+     char *env_reuse = getenv("PRIVBIND_REUSE_PORTS");
+     if (env_reuse == NULL){
+       reuse_ports.count = 0;
+     }else{
+       if (parselist(env_reuse, &reuse_ports, 1, 65535) != 0){
+         reuse_ports.count = -1;
+         return -1;
+       }
+     }
+   }
+   
+   // get bind port
+   int port = -1;
+   if (my_addr->sa_family==AF_INET)
+      port = (int) ntohs(((struct sockaddr_in *) my_addr)->sin_port);
+   else if (my_addr->sa_family==AF_INET6)
+      port = (int) ntohs(((struct sockaddr_in6 *) my_addr)->sin6_port);
+   
+   // check if we should setup SO_REUSEPORT for this port
+   if (port != -1 && is_in_list(&reuse_ports, port)){
+      int optval = 1;
+      int retval = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+      if (retval != 0)
+        return retval;
+   }
+#endif
+  
    /* First of all, attempt the bind. We only need the socket if it fails with access denied */
 
    int oret=_bind( sockfd, my_addr, addrlen );
